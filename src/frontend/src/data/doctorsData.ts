@@ -33,6 +33,8 @@ export const doctors = {
         visitingHours: "Saturday\u2013Thursday: 5:00 PM \u2013 9:00 PM",
         phone: "01751959262",
         emergencyPhone: "01751959262",
+        lat: 23.7461,
+        lng: 90.4066,
       },
     ],
     cv: {
@@ -155,6 +157,8 @@ export const doctors = {
         visitingHours: "Sunday\u2013Thursday: 4:00 PM \u2013 8:00 PM",
         phone: "+8801957212210",
         emergencyPhone: "+8801957212210",
+        lat: 23.7261,
+        lng: 90.396,
       },
     ],
     cv: {
@@ -255,5 +259,17 @@ export const doctors = {
     },
   },
 };
+
+export interface Chamber {
+  id: string;
+  nameBn: string;
+  addressBn: string;
+  address: string;
+  visitingHours: string;
+  phone: string;
+  emergencyPhone: string;
+  lat?: number;
+  lng?: number;
+}
 
 export type DoctorKey = keyof typeof doctors;

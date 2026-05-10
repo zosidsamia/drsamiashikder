@@ -1,5 +1,8 @@
+import AdminFrontPagePanel from "@/components/AdminFrontPagePanel";
 import EmergencyConsultationModal from "@/components/EmergencyConsultationModal";
+import GallerySection from "@/components/GallerySection";
 import PrescriptionPDFManager from "@/components/PrescriptionPDFManager";
+import TestimonialsSection from "@/components/TestimonialsSection";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import type { DoctorKey } from "@/data/doctorsData";
 import { useDoctorContent } from "@/hooks/useDoctorContent";
+import { useSiteConfig } from "@/hooks/useSiteConfig";
 import {
   AlertTriangle,
   Award,
@@ -45,9 +49,11 @@ import {
   ExternalLink,
   FileText,
   Heart,
+  Loader2,
   Mail,
   MapPin,
   Menu,
+  Navigation,
   Pencil,
   Phone,
   PhoneCall,
@@ -2848,6 +2854,14 @@ export default function LandingPage({
   adminLogout,
 }: LandingPageProps) {
   const { getContent, updateField, updateChambers } = useDoctorContent();
+  const {
+    config: siteConfig,
+    updateHero,
+    updateAbout,
+    updateFooter,
+    updateEmergencyContacts,
+    resetSection,
+  } = useSiteConfig();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [emergencyOpen, setEmergencyOpen] = useState(false);
@@ -2861,6 +2875,8 @@ export default function LandingPage({
     visitingHours: string;
     phone: string;
     emergencyPhone: string;
+    lat: string;
+    lng: string;
   };
   const [editChamberKey, setEditChamberKey] = useState<DoctorKey | null>(null);
   const [editChamberIdx, setEditChamberIdx] = useState<number>(-1);
@@ -2872,7 +2888,13 @@ export default function LandingPage({
     visitingHours: "",
     phone: "",
     emergencyPhone: "",
+    lat: "",
+    lng: "",
   });
+  // Near-me geolocation state
+  const [nearMeLoading, setNearMeLoading] = useState(false);
+  const [nearestChamberId, setNearestChamberId] = useState<string | null>(null);
+  const chamberRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // ── Booking state ─────────────────────────────────────────────────────
   type BookingType = "chamber" | "admitted";
@@ -3369,6 +3391,23 @@ export default function LandingPage({
               "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
           }}
         />
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => {
+              // Open panel hero tab — handled by FAB
+              document
+                .querySelector<HTMLButtonElement>(
+                  '[data-ocid="admin_panel.open_modal_button"]',
+                )
+                ?.click();
+            }}
+            className="absolute top-3 right-3 z-10 bg-amber-500/90 hover:bg-amber-500 text-white rounded-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 shadow-lg transition-all"
+            data-ocid="hero.edit_button"
+          >
+            <Pencil className="w-3.5 h-3.5" /> Edit Hero
+          </button>
+        )}
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-28 text-center">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
@@ -3376,11 +3415,10 @@ export default function LandingPage({
             transition={{ duration: 0.7 }}
           >
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
-              Expert Medical Care —<br className="hidden sm:block" /> Book Your
-              Appointment Today
+              {siteConfig.heroSection.taglineEn}
             </h1>
             <p className="text-blue-100 text-lg sm:text-xl max-w-2xl mx-auto mb-8">
-              Compassionate, evidence-based care for your family's health
+              {siteConfig.heroSection.subheadingEn}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
@@ -3394,7 +3432,7 @@ export default function LandingPage({
                 data-ocid="hero.book_appointment.primary_button"
               >
                 <CalendarDays className="w-5 h-5" />
-                Book Appointment
+                {siteConfig.heroSection.cta1Label}
               </button>
               <button
                 type="button"
@@ -3403,7 +3441,7 @@ export default function LandingPage({
                 data-ocid="hero.emergency.button"
               >
                 <AlertTriangle className="w-5 h-5" />
-                Emergency
+                {siteConfig.heroSection.cta2Label}
               </button>
             </div>
           </motion.div>
@@ -3417,9 +3455,18 @@ export default function LandingPage({
             data-ocid="hero.trust_badges.section"
           >
             {[
-              { icon: "🏥", label: "2 Expert Doctors" },
-              { icon: "👥", label: "500+ Patients Treated" },
-              { icon: "⭐", label: "10+ Years Experience" },
+              {
+                icon: "🏥",
+                label: `${siteConfig.aboutSection.doctorCount} Expert Doctors`,
+              },
+              {
+                icon: "👥",
+                label: `${siteConfig.aboutSection.patientCount} Patients Treated`,
+              },
+              {
+                icon: "⭐",
+                label: `${siteConfig.aboutSection.yearsExperience}+ Years Experience`,
+              },
               { icon: "📱", label: "English & Bangla" },
             ].map((badge) => (
               <div
@@ -3619,50 +3666,90 @@ export default function LandingPage({
         </div>
       </section>
 
-      {/* ── Trust Signals ───────────────────────────────────────── */}
-      <section
-        className="py-14 px-4 sm:px-6 bg-blue-50 border-y border-blue-100"
-        data-ocid="landing.trust_signals.section"
-      >
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            {[
-              { value: "500+", label: "Patients Treated", icon: "👥" },
-              { value: "10+", label: "Years Experience", icon: "⭐" },
-              { value: "2", label: "Expert Consultants", icon: "🩺" },
-              { value: "Bilingual", label: "English & Bangla", icon: "🌐" },
-            ].map((stat) => (
-              <div
-                key={stat.label}
-                className="bg-white rounded-2xl p-5 text-center shadow-sm border border-blue-100"
-              >
-                <div className="text-3xl mb-1">{stat.icon}</div>
-                <div className="text-2xl font-bold text-blue-700">
-                  {stat.value}
+      {/* ── Trust Signals / About ──────────────────────────────── */}
+      {siteConfig.aboutSection.visible && (
+        <section
+          className="py-14 px-4 sm:px-6 bg-blue-50 border-y border-blue-100 relative"
+          data-ocid="landing.trust_signals.section"
+        >
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                document
+                  .querySelector<HTMLButtonElement>(
+                    '[data-ocid="admin_panel.open_modal_button"]',
+                  )
+                  ?.click();
+              }}
+              className="absolute top-3 right-3 bg-amber-500/90 hover:bg-amber-500 text-white rounded-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 shadow transition-all"
+              data-ocid="trust_signals.edit_button"
+            >
+              <Pencil className="w-3.5 h-3.5" /> Edit
+            </button>
+          )}
+          <div className="max-w-6xl mx-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+              {[
+                {
+                  value: siteConfig.aboutSection.patientCount,
+                  label: "Patients Treated",
+                  icon: "👥",
+                },
+                {
+                  value: `${siteConfig.aboutSection.yearsExperience}+`,
+                  label: "Years Experience",
+                  icon: "⭐",
+                },
+                {
+                  value: `${siteConfig.aboutSection.doctorCount}`,
+                  label: "Expert Consultants",
+                  icon: "🩺",
+                },
+                { value: "Bilingual", label: "English & Bangla", icon: "🌐" },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="bg-white rounded-2xl p-5 text-center shadow-sm border border-blue-100"
+                >
+                  <div className="text-3xl mb-1">{stat.icon}</div>
+                  <div className="text-2xl font-bold text-blue-700">
+                    {stat.value}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-0.5">
+                    {stat.label}
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground mt-0.5">
-                  {stat.label}
-                </div>
+              ))}
+            </div>
+            <p className="text-center text-sm text-muted-foreground mb-4 max-w-2xl mx-auto">
+              {siteConfig.aboutSection.descriptionEn}
+            </p>
+            <div className="flex flex-wrap gap-2 justify-center mb-4">
+              {siteConfig.aboutSection.affiliations.map((affil) => (
+                <span
+                  key={affil}
+                  className="px-3 py-1.5 bg-white border border-blue-200 rounded-full text-xs font-medium text-blue-700 shadow-sm"
+                >
+                  🏥 {affil}
+                </span>
+              ))}
+            </div>
+            {siteConfig.aboutSection.specialties.length > 0 && (
+              <div className="flex flex-wrap gap-2 justify-center">
+                {siteConfig.aboutSection.specialties.map((spec) => (
+                  <span
+                    key={spec}
+                    className="px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full text-xs font-medium text-primary"
+                  >
+                    {spec}
+                  </span>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-          <div className="flex flex-wrap gap-2 justify-center">
-            {[
-              "BSMMU",
-              "DMCH",
-              "Dhaka Medical College",
-              "National Institute of Diseases of Chest & Hospital",
-            ].map((affil) => (
-              <span
-                key={affil}
-                className="px-3 py-1.5 bg-white border border-blue-200 rounded-full text-xs font-medium text-blue-700 shadow-sm"
-              >
-                🏥 {affil}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── Classroom ──────────────────────────────────────────────── */}
       <section
@@ -3736,13 +3823,113 @@ export default function LandingPage({
             transition={{ duration: 0.5 }}
             className="mb-8"
           >
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-primary" />
+            <div className="flex items-center justify-between gap-3 mb-2 flex-wrap gap-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <MapPin className="w-5 h-5 text-primary" />
+                </div>
+                <h2 className="font-display text-2xl font-bold text-foreground">
+                  Chamber Address
+                </h2>
               </div>
-              <h2 className="font-display text-2xl font-bold text-foreground">
-                Chamber Address
-              </h2>
+              {/* Find Near Me */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-primary/40 text-primary hover:bg-primary/10 transition-colors"
+                disabled={nearMeLoading}
+                onClick={() => {
+                  if (!navigator.geolocation) {
+                    toast.error(
+                      "Geolocation is not supported by your browser.",
+                    );
+                    return;
+                  }
+                  setNearMeLoading(true);
+                  setNearestChamberId(null);
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      const userLat = pos.coords.latitude;
+                      const userLng = pos.coords.longitude;
+                      function haversine(
+                        lat1: number,
+                        lon1: number,
+                        lat2: number,
+                        lon2: number,
+                      ): number {
+                        const R = 6371;
+                        const dLat = ((lat2 - lat1) * Math.PI) / 180;
+                        const dLon = ((lon2 - lon1) * Math.PI) / 180;
+                        const a =
+                          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                          Math.cos((lat1 * Math.PI) / 180) *
+                            Math.cos((lat2 * Math.PI) / 180) *
+                            Math.sin(dLon / 2) *
+                            Math.sin(dLon / 2);
+                        return (
+                          R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+                        );
+                      }
+                      let nearest: { id: string; dist: number } | null = null;
+                      for (const dKey of ["arman", "samia"] as const) {
+                        const chs = (allDocs[dKey].chambers as any[]) || [];
+                        for (const ch of chs) {
+                          const lat =
+                            typeof ch.lat === "number" ? ch.lat : 23.8103;
+                          const lng =
+                            typeof ch.lng === "number" ? ch.lng : 90.4125;
+                          const dist = haversine(userLat, userLng, lat, lng);
+                          if (!nearest || dist < nearest.dist) {
+                            nearest = { id: ch.id || ch.nameBn || "", dist };
+                          }
+                        }
+                      }
+                      setNearMeLoading(false);
+                      if (nearest) {
+                        setNearestChamberId(nearest.id);
+                        const el = chamberRefs.current[nearest.id];
+                        if (el)
+                          el.scrollIntoView({
+                            behavior: "smooth",
+                            block: "center",
+                          });
+                        toast.success(
+                          `Nearest chamber found! (${nearest.dist.toFixed(1)} km away)`,
+                        );
+                      }
+                    },
+                    (err) => {
+                      setNearMeLoading(false);
+                      if (err.code === 1) {
+                        toast.error(
+                          "Location access denied — please enable location in your browser settings.",
+                        );
+                      } else {
+                        toast.error(
+                          "Unable to get your location. Please try again.",
+                        );
+                      }
+                    },
+                    { timeout: 10000, maximumAge: 60000 },
+                  );
+                }}
+                data-ocid="chamber.find_near_me_button"
+              >
+                {nearMeLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <MapPin className="w-4 h-4" />
+                )}
+                {nearMeLoading ? "Finding..." : "Find Near Me"}
+                <span
+                  className="text-muted-foreground text-[0.75rem]"
+                  style={{
+                    fontFamily: "'Noto Sans Bengali', Arial, sans-serif",
+                  }}
+                >
+                  / কাছের চেম্বার
+                </span>
+              </Button>
             </div>
             <p className="text-muted-foreground text-sm">
               Visit us at our clinic chambers for consultations.
@@ -3789,6 +3976,8 @@ export default function LandingPage({
                             visitingHours: "",
                             phone: "",
                             emergencyPhone: "",
+                            lat: "",
+                            lng: "",
                           });
                           setEditChamberIdx(-1);
                           setEditChamberKey(key);
@@ -3800,172 +3989,252 @@ export default function LandingPage({
                     )}
                   </div>
 
-                  {chambers.map((chamber: any, cIdx: number) => (
-                    <Card
-                      key={chamber.id || cIdx}
-                      className={`border-2 ${border}`}
-                    >
-                      <CardHeader className="pb-3">
-                        <CardTitle
-                          className={`flex items-center justify-between gap-2 ${accentColor} text-base`}
-                        >
-                          <span>{chamber.nameBn || chamber.address}</span>
-                          {isAdmin && (
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 opacity-70 hover:opacity-100"
-                                onClick={() => {
-                                  setChamberEditForm({
-                                    id: chamber.id || String(cIdx),
-                                    nameBn: chamber.nameBn || "",
-                                    addressBn: chamber.addressBn || "",
-                                    address: chamber.address || "",
-                                    visitingHours: chamber.visitingHours || "",
-                                    phone: chamber.phone || "",
-                                    emergencyPhone:
-                                      chamber.emergencyPhone || "",
-                                  });
-                                  setEditChamberIdx(cIdx);
-                                  setEditChamberKey(key);
-                                }}
-                                data-ocid="chamber.edit_button"
-                              >
-                                <Edit className="w-3.5 h-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 opacity-70 hover:opacity-100 text-destructive hover:text-destructive"
-                                disabled={chambers.length <= 1}
-                                onClick={() => {
-                                  if (!confirm("Delete this chamber?")) return;
-                                  const updated = chambers.filter(
-                                    (_: any, i: number) => i !== cIdx,
-                                  );
-                                  updateChambers(key, updated);
-                                }}
-                                data-ocid="chamber.delete_button"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
+                  {chambers.map((chamber: any, cIdx: number) => {
+                    const chamberId = chamber.id || String(cIdx);
+                    const isNearest = nearestChamberId === chamberId;
+                    const encodedAddr = encodeURIComponent(
+                      chamber.address || chamber.addressBn || "",
+                    );
+                    return (
+                      <Card
+                        key={chamberId}
+                        ref={(el) => {
+                          chamberRefs.current[chamberId] = el;
+                        }}
+                        className={`border-2 ${border} transition-all duration-500 ${isNearest ? "ring-2 ring-emerald-400 shadow-lg" : ""}`}
+                      >
+                        <CardHeader className="pb-3">
+                          <CardTitle
+                            className={`flex items-center justify-between gap-2 ${accentColor} text-base`}
+                          >
+                            <span className="flex items-center gap-2">
+                              {chamber.nameBn || chamber.address}
+                              {isNearest && (
+                                <span className="inline-flex items-center gap-1 text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-full px-2 py-0.5">
+                                  <MapPin className="w-3 h-3" />
+                                  Nearest to you
+                                </span>
+                              )}
+                            </span>
+                            {isAdmin && (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 opacity-70 hover:opacity-100"
+                                  onClick={() => {
+                                    setChamberEditForm({
+                                      id: chamber.id || String(cIdx),
+                                      nameBn: chamber.nameBn || "",
+                                      addressBn: chamber.addressBn || "",
+                                      address: chamber.address || "",
+                                      visitingHours:
+                                        chamber.visitingHours || "",
+                                      phone: chamber.phone || "",
+                                      emergencyPhone:
+                                        chamber.emergencyPhone || "",
+                                      lat:
+                                        chamber.lat != null
+                                          ? String(chamber.lat)
+                                          : "",
+                                      lng:
+                                        chamber.lng != null
+                                          ? String(chamber.lng)
+                                          : "",
+                                    });
+                                    setEditChamberIdx(cIdx);
+                                    setEditChamberKey(key);
+                                  }}
+                                  data-ocid="chamber.edit_button"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 opacity-70 hover:opacity-100 text-destructive hover:text-destructive"
+                                  disabled={chambers.length <= 1}
+                                  onClick={() => {
+                                    if (!confirm("Delete this chamber?"))
+                                      return;
+                                    const updated = chambers.filter(
+                                      (_: any, i: number) => i !== cIdx,
+                                    );
+                                    updateChambers(key, updated);
+                                  }}
+                                  data-ocid="chamber.delete_button"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+                              </div>
+                            )}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {/* Address block */}
+                          <div className={`p-4 rounded-xl ${bg}`}>
+                            <div className="flex items-start gap-3">
+                              <MapPin
+                                className={`w-5 h-5 ${accentColor} shrink-0 mt-0.5`}
+                              />
+                              <div className="flex-1 min-w-0">
+                                {chamber.addressBn && (
+                                  <p
+                                    className="text-sm font-medium text-foreground"
+                                    style={{
+                                      fontFamily:
+                                        "'Noto Sans Bengali', Arial, sans-serif",
+                                    }}
+                                  >
+                                    {chamber.addressBn
+                                      .split("\n")
+                                      .map(
+                                        (
+                                          line: string,
+                                          lineIdx: number,
+                                          arr: string[],
+                                        ) => (
+                                          <span key={line}>
+                                            {line}
+                                            {lineIdx < arr.length - 1 && <br />}
+                                          </span>
+                                        ),
+                                      )}
+                                  </p>
+                                )}
+                                {chamber.address && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {chamber.address}
+                                  </p>
+                                )}
+                                {(chamber.address || chamber.addressBn) && (
+                                  <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${encodedAddr}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 mt-2 text-xs text-blue-500 hover:text-blue-700 transition-colors"
+                                    data-ocid="chamber.maps.link"
+                                  >
+                                    <MapPin className="w-3 h-3" />
+                                    View on Map
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          {/* Embedded map */}
+                          {(chamber.address || chamber.addressBn) && (
+                            <div className="rounded-xl overflow-hidden border border-border shadow-sm">
+                              <iframe
+                                src={`https://maps.google.com/maps?q=${encodedAddr}&output=embed&z=15`}
+                                width="100%"
+                                height="180"
+                                style={{ border: 0, display: "block" }}
+                                loading="lazy"
+                                referrerPolicy="no-referrer-when-downgrade"
+                                title={`Map — ${chamber.nameBn || chamber.address}`}
+                                data-ocid="chamber.map_embed"
+                              />
                             </div>
                           )}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className={`p-4 rounded-xl ${bg}`}>
-                          <div className="flex items-start gap-3">
-                            <MapPin
-                              className={`w-5 h-5 ${accentColor} shrink-0 mt-0.5`}
-                            />
-                            <div>
-                              {chamber.addressBn && (
-                                <p
-                                  className="text-sm font-medium text-foreground"
+                          {/* Get Directions button */}
+                          {(chamber.address || chamber.addressBn) && (
+                            <a
+                              href={`https://www.google.com/maps/dir/?api=1&destination=${encodedAddr}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block"
+                              data-ocid="chamber.get_directions_button"
+                            >
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className={`w-full gap-2 ${
+                                  key === "arman"
+                                    ? "border-primary/40 text-primary hover:bg-primary/10"
+                                    : "border-rose-300 text-rose-600 hover:bg-rose-50"
+                                } transition-colors`}
+                                type="button"
+                              >
+                                <Navigation className="w-4 h-4" />
+                                Get Directions
+                                <span
+                                  className="text-muted-foreground text-[0.7rem]"
                                   style={{
                                     fontFamily:
                                       "'Noto Sans Bengali', Arial, sans-serif",
                                   }}
                                 >
-                                  {chamber.addressBn
-                                    .split("\n")
-                                    .map(
-                                      (
-                                        line: string,
-                                        lineIdx: number,
-                                        arr: string[],
-                                      ) => (
-                                        <span key={line}>
-                                          {line}
-                                          {lineIdx < arr.length - 1 && <br />}
-                                        </span>
-                                      ),
-                                    )}
+                                  / দিকনির্দেশনা
+                                </span>
+                              </Button>
+                            </a>
+                          )}
+                          {/* Visiting hours, phone, email, emergency */}
+                          <div className="space-y-3">
+                            {chamber.visitingHours && (
+                              <div className="flex items-center gap-3">
+                                <Clock
+                                  className={`w-4 h-4 ${accentColor} shrink-0`}
+                                />
+                                <div>
+                                  <p className="text-xs text-muted-foreground">
+                                    Visiting Hours
+                                  </p>
+                                  <p className="text-sm font-medium">
+                                    {chamber.visitingHours}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                            {chamber.phone && (
+                              <div className="flex items-center gap-3">
+                                <Phone
+                                  className={`w-4 h-4 ${accentColor} shrink-0`}
+                                />
+                                <div>
+                                  <p className="text-xs text-muted-foreground">
+                                    Phone
+                                  </p>
+                                  <p className="text-sm font-medium">
+                                    {chamber.phone}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-3">
+                              <Mail
+                                className={`w-4 h-4 ${accentColor} shrink-0`}
+                              />
+                              <div>
+                                <p className="text-xs text-muted-foreground">
+                                  Email
                                 </p>
-                              )}
-                              {chamber.address && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {chamber.address}
+                                <p className="text-sm font-medium">
+                                  {doc.email}
                                 </p>
-                              )}
-                              {(chamber.address || chamber.addressBn) && (
-                                <a
-                                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(chamber.address || chamber.addressBn || "")}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 mt-2 text-xs text-blue-500 hover:text-blue-700 transition-colors"
-                                  data-ocid="chamber.maps.link"
-                                >
-                                  <MapPin className="w-3 h-3" />
-                                  View on Map
-                                </a>
-                              )}
+                              </div>
                             </div>
+                            {chamber.emergencyPhone && (
+                              <div className="flex items-center gap-3">
+                                <PhoneCall
+                                  className={`w-4 h-4 ${accentColor} shrink-0`}
+                                />
+                                <div>
+                                  <p className="text-xs text-muted-foreground">
+                                    Emergency
+                                  </p>
+                                  <p className="text-sm font-medium">
+                                    {chamber.emergencyPhone}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                        <div className="space-y-3">
-                          {chamber.visitingHours && (
-                            <div className="flex items-center gap-3">
-                              <Clock
-                                className={`w-4 h-4 ${accentColor} shrink-0`}
-                              />
-                              <div>
-                                <p className="text-xs text-muted-foreground">
-                                  Visiting Hours
-                                </p>
-                                <p className="text-sm font-medium">
-                                  {chamber.visitingHours}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                          {chamber.phone && (
-                            <div className="flex items-center gap-3">
-                              <Phone
-                                className={`w-4 h-4 ${accentColor} shrink-0`}
-                              />
-                              <div>
-                                <p className="text-xs text-muted-foreground">
-                                  Phone
-                                </p>
-                                <p className="text-sm font-medium">
-                                  {chamber.phone}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-3">
-                            <Mail
-                              className={`w-4 h-4 ${accentColor} shrink-0`}
-                            />
-                            <div>
-                              <p className="text-xs text-muted-foreground">
-                                Email
-                              </p>
-                              <p className="text-sm font-medium">{doc.email}</p>
-                            </div>
-                          </div>
-                          {chamber.emergencyPhone && (
-                            <div className="flex items-center gap-3">
-                              <PhoneCall
-                                className={`w-4 h-4 ${accentColor} shrink-0`}
-                              />
-                              <div>
-                                <p className="text-xs text-muted-foreground">
-                                  Emergency
-                                </p>
-                                <p className="text-sm font-medium">
-                                  {chamber.emergencyPhone}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </motion.div>
               );
             })}
@@ -4066,6 +4335,40 @@ export default function LandingPage({
                   }
                 />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>
+                    Latitude{" "}
+                    <span className="text-muted-foreground text-xs">
+                      (for map)
+                    </span>
+                  </Label>
+                  <Input
+                    value={chamberEditForm.lat}
+                    onChange={(e) =>
+                      setChamberEditForm((f) => ({ ...f, lat: e.target.value }))
+                    }
+                    placeholder="e.g. 23.7461"
+                    data-ocid="chamber.lat_input"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>
+                    Longitude{" "}
+                    <span className="text-muted-foreground text-xs">
+                      (for map)
+                    </span>
+                  </Label>
+                  <Input
+                    value={chamberEditForm.lng}
+                    onChange={(e) =>
+                      setChamberEditForm((f) => ({ ...f, lng: e.target.value }))
+                    }
+                    placeholder="e.g. 90.4066"
+                    data-ocid="chamber.lng_input"
+                  />
+                </div>
+              </div>
               <div className="flex gap-2 pt-2">
                 <Button
                   className="flex-1"
@@ -4075,15 +4378,28 @@ export default function LandingPage({
                     const chambers = (doc.chambers as any[]) || [];
                     if (editChamberIdx === -1) {
                       // Add new
+                      const latNum = Number.parseFloat(chamberEditForm.lat);
+                      const lngNum = Number.parseFloat(chamberEditForm.lng);
                       const newChamber = {
                         ...chamberEditForm,
                         id: Date.now().toString(),
+                        lat: !Number.isNaN(latNum) ? latNum : undefined,
+                        lng: !Number.isNaN(lngNum) ? lngNum : undefined,
                       };
                       updateChambers(editChamberKey, [...chambers, newChamber]);
                     } else {
                       // Update existing
+                      const latNum = Number.parseFloat(chamberEditForm.lat);
+                      const lngNum = Number.parseFloat(chamberEditForm.lng);
                       const updated = chambers.map((c: any, i: number) =>
-                        i === editChamberIdx ? { ...c, ...chamberEditForm } : c,
+                        i === editChamberIdx
+                          ? {
+                              ...c,
+                              ...chamberEditForm,
+                              lat: !Number.isNaN(latNum) ? latNum : c.lat,
+                              lng: !Number.isNaN(lngNum) ? lngNum : c.lng,
+                            }
+                          : c,
                       );
                       updateChambers(editChamberKey, updated);
                     }
@@ -4111,6 +4427,12 @@ export default function LandingPage({
           </DialogContent>
         </Dialog>
       )}
+
+      {/* ── Testimonials ──────────────────────────────────────── */}
+      <TestimonialsSection isAdmin={isAdmin} />
+
+      {/* ── Gallery ──────────────────────────────────────────── */}
+      <GallerySection isAdmin={isAdmin} />
 
       {/* ── Appointments ────────────────────────────────────────────── */}
       <section id="appointments" className="py-16 bg-muted/30 px-4 sm:px-6">
@@ -4856,9 +5178,19 @@ export default function LandingPage({
           </div>
         </section>
       )}
+      {isAdmin && (
+        <AdminFrontPagePanel
+          config={siteConfig}
+          updateHero={updateHero}
+          updateAbout={updateAbout}
+          updateFooter={updateFooter}
+          updateEmergencyContacts={updateEmergencyContacts}
+          resetSection={resetSection}
+        />
+      )}
       {/* ── Footer ──────────────────────────────────────────────────── */}
       <footer
-        className="bg-slate-800 text-white px-4 sm:px-6 pt-12 pb-6"
+        className="bg-slate-800 text-white px-4 sm:px-6 pt-12 pb-6 relative"
         data-ocid="landing.footer.section"
       >
         <div className="max-w-6xl mx-auto">
@@ -4870,29 +5202,70 @@ export default function LandingPage({
                   <Stethoscope className="w-5 h-5 text-white" />
                 </div>
                 <span className="font-bold text-xl text-white">
-                  Dr. Arman Kabir&apos;s Care
+                  {siteConfig.aboutSection.clinicNameEn}
                 </span>
               </div>
               <p className="text-slate-300 text-sm mb-4 max-w-sm">
-                Comprehensive patient management and medical education serving
-                patients and students across Bangladesh.
+                {siteConfig.aboutSection.descriptionEn}
               </p>
               <div className="space-y-2 text-sm text-slate-300">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-blue-400 shrink-0" />
-                  <span>Dhaka, Bangladesh</span>
+                  <span>{siteConfig.footerSection.addressEn}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-blue-400 shrink-0" />
-                  <span>{armanDoc.phone}</span>
+                  <span>
+                    {siteConfig.footerSection.phone || armanDoc.phone}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-blue-400 shrink-0" />
-                  <span>{armanDoc.email}</span>
+                  <span>
+                    {siteConfig.footerSection.email || armanDoc.email}
+                  </span>
                 </div>
+                {siteConfig.footerSection.openingHours && (
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span>{siteConfig.footerSection.openingHours}</span>
+                  </div>
+                )}
               </div>
+              {siteConfig.footerSection.socialLinks.length > 0 && (
+                <div className="flex flex-wrap gap-3 mt-3">
+                  {siteConfig.footerSection.socialLinks.map((link) => (
+                    <a
+                      key={link.label}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-sm text-blue-300 hover:text-blue-100 transition-colors"
+                    >
+                      <span>{link.icon}</span>
+                      {link.label}
+                    </a>
+                  ))}
+                </div>
+              )}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    document
+                      .querySelector<HTMLButtonElement>(
+                        '[data-ocid="admin_panel.open_modal_button"]',
+                      )
+                      ?.click()
+                  }
+                  className="mt-3 bg-amber-500/80 hover:bg-amber-500 text-white rounded-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition-all w-fit"
+                  data-ocid="footer.edit_button"
+                >
+                  <Pencil className="w-3.5 h-3.5" /> Edit Footer
+                </button>
+              )}
               <a
-                href="https://www.google.com/maps/search/?api=1&query=Dhaka+Bangladesh"
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(siteConfig.footerSection.addressEn)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 mt-4 text-sm text-blue-400 hover:text-blue-300 transition-colors"
@@ -4978,8 +5351,8 @@ export default function LandingPage({
           {/* Bottom bar */}
           <div className="border-t border-slate-700 pt-5 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-slate-400 text-center">
-              © {new Date().getFullYear()} Dr. Arman Kabir&apos;s Care. All
-              rights reserved. Built with{" "}
+              © {new Date().getFullYear()}{" "}
+              {siteConfig.footerSection.copyrightText} Built with{" "}
               <Heart className="w-3 h-3 inline text-rose-400" /> using{" "}
               <a
                 href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(typeof window !== "undefined" ? window.location.hostname : "")}`}

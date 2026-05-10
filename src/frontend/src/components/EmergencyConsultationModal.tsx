@@ -15,18 +15,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { DEFAULT_SITE_CONFIG } from "@/hooks/useSiteConfig";
 import { AlertTriangle, Phone, Search, Send } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-const WHATSAPP_NUMBERS: Record<string, string> = {
-  arman: "8801751959262",
-  samia: "8801957212210",
-};
-
-const DOCTOR_LABELS: Record<string, string> = {
-  arman: "Dr. Arman Kabir",
-  samia: "Dr. Samia Shikder",
-};
+// Load emergency contacts from siteConfig localStorage
+function loadEmergencyContacts() {
+  try {
+    const raw = localStorage.getItem("siteConfig");
+    if (!raw) return DEFAULT_SITE_CONFIG.emergencyContacts;
+    const cfg = JSON.parse(raw);
+    if (cfg?.emergencyContacts?.length) return cfg.emergencyContacts;
+    return DEFAULT_SITE_CONFIG.emergencyContacts;
+  } catch {
+    return DEFAULT_SITE_CONFIG.emergencyContacts;
+  }
+}
 
 // Normalize register number: "0001/26" and "1/26" treated as equal
 function normalizeRegNo(rn: string): string {
@@ -112,6 +116,15 @@ interface Props {
 }
 
 export default function EmergencyConsultationModal({ open, onClose }: Props) {
+  const [emergencyContacts, setEmergencyContacts] = useState(
+    loadEmergencyContacts,
+  );
+
+  // Reload contacts from storage whenever the modal opens
+  useEffect(() => {
+    if (open) setEmergencyContacts(loadEmergencyContacts());
+  }, [open]);
+
   const [registerNumber, setRegisterNumber] = useState("");
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
@@ -156,11 +169,14 @@ export default function EmergencyConsultationModal({ open, onClose }: Props) {
       return;
     }
     setError("");
-    const number = WHATSAPP_NUMBERS[doctor];
-    const docName = DOCTOR_LABELS[doctor];
+    const contact = emergencyContacts.find((c) => c.doctorName === doctor);
+    const number = contact?.whatsappNumber || "";
     const regPart = registerNumber ? `\nReg. No.: ${registerNumber}` : "";
     const phonePart = phone ? `\nPhone: ${phone}` : "";
-    const message = `🚨 Emergency Consultation Request\n\nDoctor: ${docName}\nName: ${name}${regPart}\nAge: ${age} years${phonePart}\nSymptoms: ${symptoms}\n\nSent from Dr. Arman Kabir's Care portal.`;
+    const baseMessage =
+      contact?.prefilledMessage ||
+      `Emergency Consultation Request\n\nDoctor: ${doctor}`;
+    const message = `🚨 ${baseMessage}\n\nName: ${name}${regPart}\nAge: ${age} years${phonePart}\nSymptoms: ${symptoms}\n\nSent from Dr. Arman Kabir's Care portal.`;
     const url = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
     // reset
@@ -275,8 +291,11 @@ export default function EmergencyConsultationModal({ open, onClose }: Props) {
                 <SelectValue placeholder="Choose a doctor" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="arman">Dr. Arman Kabir</SelectItem>
-                <SelectItem value="samia">Dr. Samia Shikder</SelectItem>
+                {emergencyContacts.map((c) => (
+                  <SelectItem key={c.doctorName} value={c.doctorName}>
+                    {c.doctorName}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
