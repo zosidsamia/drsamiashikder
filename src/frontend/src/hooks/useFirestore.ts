@@ -1,110 +1,92 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { firestoreService } from '@/lib/firebaseService';
-import { where, orderBy, limit, QueryConstraint } from 'firebase/firestore';
+import { firestoreService, WhereConstraint } from '@/lib/firebaseService';
+import { DocumentData } from 'firebase/firestore';
 
 /**
- * Hook for querying Firestore documents
+ * Query a collection
  */
-export const useFirestoreQuery = <T extends Record<string, any>>(
-  collectionName: string,
-  constraints: QueryConstraint[] = [],
-  enabled: boolean = true,
-) => {
+export function useFirestoreQuery<T extends DocumentData>(
+  collectionName: string
+) {
   return useQuery({
-    queryKey: [collectionName, JSON.stringify(constraints)],
-    queryFn: async () => {
-      return firestoreService.queryDocuments<T>(collectionName, constraints);
-    },
-    enabled,
+    queryKey: [collectionName],
+    queryFn: () => firestoreService.queryDocuments<T>(collectionName),
   });
-};
+}
 
 /**
- * Hook for querying by a single field
+ * Query by field constraint
  */
-export const useFirestoreQueryByField = <T extends Record<string, any>>(
+export function useFirestoreQueryByField<T extends DocumentData>(
   collectionName: string,
-  fieldName: string,
-  operator: any,
-  value: any,
-  enabled: boolean = true,
-) => {
+  field: string,
+  value: unknown
+) {
   return useQuery({
-    queryKey: [collectionName, fieldName, operator, value],
-    queryFn: async () => {
-      return firestoreService.queryByField<T>(collectionName, fieldName, operator, value);
-    },
-    enabled: enabled && value !== undefined,
+    queryKey: [collectionName, field, value],
+    queryFn: () =>
+      firestoreService.queryByField<T>(collectionName, field, value),
   });
-};
+}
 
 /**
- * Hook for getting a single document
+ * Get a single document
  */
-export const useFirestoreDocument = <T extends Record<string, any>>(
+export function useFirestoreDocument<T extends DocumentData>(
   collectionName: string,
-  documentId: string | null | undefined,
-  enabled: boolean = true,
-) => {
+  docId: string | null
+) {
   return useQuery({
-    queryKey: [collectionName, documentId],
-    queryFn: async () => {
-      if (!documentId) return null;
-      return firestoreService.getDocument<T>(collectionName, documentId);
-    },
-    enabled: enabled && !!documentId,
+    queryKey: [collectionName, docId],
+    queryFn: () =>
+      docId
+        ? firestoreService.getDocument<T>(collectionName, docId)
+        : Promise.resolve(null),
+    enabled: !!docId,
   });
-};
+}
 
 /**
- * Hook for adding a document
+ * Add document mutation
  */
-export const useAddFirestoreDocument = <T extends Record<string, any>>(
-  collectionName: string,
-) => {
+export function useAddFirestoreDocument(collectionName: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: T) => firestoreService.addDocument(collectionName, data),
+    mutationFn: (data: DocumentData) =>
+      firestoreService.addDocument(collectionName, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [collectionName] });
     },
   });
-};
+}
 
 /**
- * Hook for updating a document
+ * Update document mutation
  */
-export const useUpdateFirestoreDocument = <T extends Record<string, any>>(
-  collectionName: string,
-) => {
+export function useUpdateFirestoreDocument(collectionName: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      documentId,
-      data,
-    }: {
-      documentId: string;
-      data: Partial<T>;
-    }) => firestoreService.updateDocument(collectionName, documentId, data),
+    mutationFn: ({ docId, data }: { docId: string; data: DocumentData }) =>
+      firestoreService.updateDocument(collectionName, docId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [collectionName] });
     },
   });
-};
+}
 
 /**
- * Hook for deleting a document
+ * Delete document mutation
  */
-export const useDeleteFirestoreDocument = (collectionName: string) => {
+export function useDeleteFirestoreDocument(collectionName: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (documentId: string) =>
-      firestoreService.deleteDocument(collectionName, documentId),
+    mutationFn: (docId: string) =>
+      firestoreService.deleteDocument(collectionName, docId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [collectionName] });
     },
   });
-};
+}

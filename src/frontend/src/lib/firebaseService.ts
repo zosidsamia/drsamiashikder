@@ -1,92 +1,108 @@
 import {
-  doc,
-  setDoc,
+  collection,
   addDoc,
+  doc,
   getDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
-  collection,
   query,
   where,
-  getDocs,
   Query,
-  DocumentData,
+  getDocs,
   Firestore,
+  DocumentData,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-export interface FirestoreQueryConstraint {
+export type WhereConstraint = {
   field: string;
-  operator: '<' | '<=' | '==' | '!=' | '>=' | '>' | 'array-contains' | 'in';
+  operator: '==' | '<' | '>' | '<=' | '>=' | '!=' | 'in' | 'array-contains';
   value: unknown;
-}
+};
 
 export class FirestoreService {
   constructor(private firestore: Firestore | null) {}
 
-  private validateFirestore() {
-    if (!this.firestore) {
-      throw new Error('Firestore not initialized');
-    }
+  /**
+   * Add a new document with auto-generated ID
+   */
+  async addDocument<T extends DocumentData>(
+    collectionName: string,
+    data: T
+  ): Promise<string> {
+    if (!this.firestore) throw new Error('Firestore not initialized');
+    const ref = await addDoc(collection(this.firestore, collectionName), data);
+    return ref.id;
   }
 
+  /**
+   * Set a document (create or overwrite)
+   */
   async setDocument<T extends DocumentData>(
     collectionName: string,
     docId: string,
     data: T,
     merge = false
   ): Promise<void> {
-    this.validateFirestore();
-    await setDoc(doc(this.firestore!, collectionName, docId), data, { merge });
+    if (!this.firestore) throw new Error('Firestore not initialized');
+    await setDoc(
+      doc(this.firestore, collectionName, docId),
+      data,
+      { merge }
+    );
   }
 
-  async addDocument<T extends DocumentData>(
-    collectionName: string,
-    data: T
-  ): Promise<string> {
-    this.validateFirestore();
-    const docRef = await addDoc(collection(this.firestore!, collectionName), data);
-    return docRef.id;
-  }
-
+  /**
+   * Get a single document
+   */
   async getDocument<T extends DocumentData>(
     collectionName: string,
     docId: string
   ): Promise<T | null> {
-    this.validateFirestore();
-    const docSnap = await getDoc(doc(this.firestore!, collectionName, docId));
-    return docSnap.exists() ? (docSnap.data() as T) : null;
+    if (!this.firestore) throw new Error('Firestore not initialized');
+    const snapshot = await getDoc(
+      doc(this.firestore, collectionName, docId)
+    );
+    return snapshot.exists() ? (snapshot.data() as T) : null;
   }
 
-  async updateDocument<T extends Partial<DocumentData>>(
+  /**
+   * Update specific fields in a document
+   */
+  async updateDocument<T extends DocumentData>(
     collectionName: string,
     docId: string,
-    data: T
+    data: Partial<T>
   ): Promise<void> {
-    this.validateFirestore();
-    await updateDoc(doc(this.firestore!, collectionName, docId), data);
+    if (!this.firestore) throw new Error('Firestore not initialized');
+    await updateDoc(doc(this.firestore, collectionName, docId), data as any);
   }
 
+  /**
+   * Delete a document
+   */
   async deleteDocument(collectionName: string, docId: string): Promise<void> {
-    this.validateFirestore();
-    await deleteDoc(doc(this.firestore!, collectionName, docId));
+    if (!this.firestore) throw new Error('Firestore not initialized');
+    await deleteDoc(doc(this.firestore, collectionName, docId));
   }
 
+  /**
+   * Query documents with constraints
+   */
   async queryDocuments<T extends DocumentData>(
     collectionName: string,
-    constraints: FirestoreQueryConstraint[] = []
+    constraints: WhereConstraint[] = []
   ): Promise<(T & { id: string })[]> {
-    this.validateFirestore();
-
-    let q: Query<DocumentData>;
-
-    if (constraints.length === 0) {
-      q = query(collection(this.firestore!, collectionName));
-    } else {
+    if (!this.firestore) throw new Error('Firestore not initialized');
+    
+    let q: Query = collection(this.firestore, collectionName);
+    
+    if (constraints.length > 0) {
       const whereConstraints = constraints.map((c) =>
-        where(c.field, c.operator, c.value)
+        where(c.field, c.operator as any, c.value)
       );
-      q = query(collection(this.firestore!, collectionName), ...whereConstraints);
+      q = query(collection(this.firestore, collectionName), ...whereConstraints);
     }
 
     const snapshot = await getDocs(q);
@@ -96,16 +112,18 @@ export class FirestoreService {
     } as T & { id: string }));
   }
 
+  /**
+   * Query documents by a single field
+   */
   async queryByField<T extends DocumentData>(
     collectionName: string,
-    fieldName: string,
+    field: string,
     value: unknown
   ): Promise<(T & { id: string })[]> {
     return this.queryDocuments<T>(collectionName, [
-      { field: fieldName, operator: '==', value },
+      { field, operator: '==', value },
     ]);
   }
 }
 
-// Export singleton instance
 export const firestoreService = new FirestoreService(db);

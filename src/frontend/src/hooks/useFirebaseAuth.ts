@@ -1,88 +1,92 @@
 import { useEffect, useState } from 'react';
 import {
-  signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User,
-  AuthError,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
-export interface UseFirebaseAuthReturn {
+interface AuthState {
   user: User | null;
   loading: boolean;
   error: string | null;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
 }
 
-export function useFirebaseAuth(): UseFirebaseAuthReturn {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function useFirebaseAuth() {
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    loading: true,
+    error: null,
+  });
 
   // Listen to auth state changes
   useEffect(() => {
     if (!auth) {
-      setLoading(false);
-      setError('Firebase Auth not initialized');
+      setState((prev) => ({ ...prev, loading: false }));
       return;
     }
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
+      setState({
+        user,
+        loading: false,
+        error: null,
+      });
     });
 
     return () => unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    if (!auth) throw new Error('Firebase Auth not initialized');
-    try {
-      setError(null);
-      setLoading(true);
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-      const authError = err as AuthError;
-      setError(authError.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Sign up with email and password
   const signUp = async (email: string, password: string) => {
-    if (!auth) throw new Error('Firebase Auth not initialized');
+    if (!auth) throw new Error('Firebase not initialized');
     try {
-      setError(null);
-      setLoading(true);
-      await createUserWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-      const authError = err as AuthError;
-      setError(authError.message);
-      throw err;
-    } finally {
-      setLoading(false);
+      setState((prev) => ({ ...prev, loading: true, error: null }));
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      setState({ user: result.user, loading: false, error: null });
+      return result.user;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Sign up failed';
+      setState((prev) => ({ ...prev, loading: false, error: message }));
+      throw error;
     }
   };
 
+  // Sign in with email and password
+  const signIn = async (email: string, password: string) => {
+    if (!auth) throw new Error('Firebase not initialized');
+    try {
+      setState((prev) => ({ ...prev, loading: true, error: null }));
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      setState({ user: result.user, loading: false, error: null });
+      return result.user;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Sign in failed';
+      setState((prev) => ({ ...prev, loading: false, error: message }));
+      throw error;
+    }
+  };
+
+  // Sign out
   const signOut = async () => {
-    if (!auth) throw new Error('Firebase Auth not initialized');
+    if (!auth) throw new Error('Firebase not initialized');
     try {
-      setError(null);
-      setLoading(true);
+      setState((prev) => ({ ...prev, loading: true, error: null }));
       await firebaseSignOut(auth);
-    } catch (err) {
-      const authError = err as AuthError;
-      setError(authError.message);
-      throw err;
-    } finally {
-      setLoading(false);
+      setState({ user: null, loading: false, error: null });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Sign out failed';
+      setState((prev) => ({ ...prev, loading: false, error: message }));
+      throw error;
     }
   };
 
-  return { user, loading, error, signIn, signUp, signOut };
+  return {
+    ...state,
+    signUp,
+    signIn,
+    signOut,
+  };
 }
