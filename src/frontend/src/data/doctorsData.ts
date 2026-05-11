@@ -140,7 +140,7 @@ export const doctors = {
     hospital: "Dhaka Medical College",
     phone: "+8801000000000",
     phone2: "",
-    email: "samiashikder33@gmail.com",
+    email: "--@gmail.com",
     whatsapp: "+880100000000",
     photo: null as string | null,
     cvPdfUrl: "/assets/uploads/CV_Samia-Shikder-16.3.2026-1.pdf" as
