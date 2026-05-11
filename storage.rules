@@ -1,0 +1,33 @@
+# Firebase Storage Security Rules
+# Deploy to Firebase Console > Storage > Rules
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Patients medical records
+    match /patients/{patientId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // User avatars
+    match /avatars/{userId}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == userId;
+    }
+    
+    // Prescriptions PDFs
+    match /prescriptions/{prescriptionId}/{fileName} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Lab reports
+    match /reports/{reportId}/{fileName} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
