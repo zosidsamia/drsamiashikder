@@ -18,6 +18,10 @@ export interface HeroSection {
   taglineBn: string;
   subheadingEn: string;
   subheadingBn: string;
+  heroTaglineEn?: string;
+  heroTaglineBn?: string;
+  heroDescriptionEn?: string;
+  heroDescriptionBn?: string;
   cta1Label: string;
   cta2Label: string;
 }
@@ -54,10 +58,16 @@ export interface SiteConfig {
 
 export const DEFAULT_SITE_CONFIG: SiteConfig = {
   heroSection: {
-    taglineEn: "Expert Medical Care — Book Your Appointment Today",
-    taglineBn: "বিশেষজ্ঞ চিকিৎসা সেবা — আজই অ্যাপয়েন্টমেন্ট নিন",
-    subheadingEn: "Compassionate, evidence-based care for your family's health",
-    subheadingBn: "আপনার পরিবারের স্বাস্থ্যের জন্য সহানুভূতিশীল, বৈজ্ঞানিক চিকিৎসা",
+    taglineEn: "Dr. Arman Kabir's Care",
+    taglineBn: "ডা. আরমান কবিরের চেম্বার",
+    subheadingEn: "Advanced Healthcare With a Human Touch",
+    subheadingBn: "মানবিক স্পর্শে উন্নত স্বাস্থ্যসেবা",
+    heroTaglineEn: "Healing with Trust and Compassion",
+    heroTaglineBn: "বিশ্বাস ও সহানুভূতির সাথে নিরাময়",
+    heroDescriptionEn:
+      "Expert diagnosis, compassionate treatment, and trusted care for every stage of life.",
+    heroDescriptionBn:
+      "জীবনের প্রতিটি পর্যায়ে বিশেষজ্ঞ রোগ নির্ণয়, সহানুভূতিশীল চিকিৎসা ও বিশ্বস্ত সেবা।",
     cta1Label: "Book Appointment",
     cta2Label: "Emergency",
   },

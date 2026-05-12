@@ -1237,7 +1237,15 @@ function AppInner() {
   // Create anonymous canister actor once on mount.
   // Anonymous reads work for all query methods (no auth required on canister).
   const canisterActorRef = useRef<ReturnType<typeof createActor> | null>(null);
+  // Track actor in state so useMigration receives a non-null value after creation.
+  // canisterActorRef is kept for synchronous access; canisterActorState drives re-renders.
+  const [canisterActorState, setCanisterActorState] = useState<ReturnType<
+    typeof createActor
+  > | null>(null);
+
   useEffect(() => {
+    // Guard: only create actor once
+    if (canisterActorRef.current) return;
     try {
       const canisterId =
         ((window as unknown as Record<string, unknown>)
@@ -1245,7 +1253,14 @@ function AppInner() {
         (import.meta as unknown as Record<string, Record<string, string>>).env
           ?.CANISTER_ID_BACKEND ??
         "";
-      if (!canisterId) return;
+      if (!canisterId) {
+        console.error(
+          "[sync] CANISTER_ID_BACKEND is empty or undefined — canister actor not created. " +
+            "All sync attempts will fail until this is resolved. " +
+            "Check that the backend canister is deployed and the env var is set.",
+        );
+        return;
+      }
       const actor = createActor(
         canisterId,
         async (file) => {
@@ -1259,10 +1274,21 @@ function AppInner() {
           );
         },
       );
+      if (!actor) {
+        console.error(
+          "[sync] createActor() returned null/undefined — setCanisterActor not called. " +
+            "Verify the canister ID is correct and the backend is reachable.",
+        );
+        return;
+      }
       canisterActorRef.current = actor;
+      // Set in state so useMigration receives the live actor reference.
+      // This triggers a re-render and starts the sync/polling loop.
+      setCanisterActorState(actor);
       setCanisterActor(actor);
+      console.info("[sync] Canister actor created and ready.");
     } catch (err) {
-      console.warn("Could not create canister actor:", err);
+      console.error("[sync] Could not create canister actor:", err);
     }
   }, []);
 
@@ -1283,10 +1309,9 @@ function AppInner() {
   }, [queryClient]);
 
   // ── Migration toast ──────────────────────────────────────────────────────────
-  const { migrationStatus } = useMigration(
-    canisterActorRef.current,
-    invalidateAll,
-  );
+  // Pass canisterActorState (not canisterActorRef.current) so useMigration
+  // re-runs its effects when the actor becomes available after mount.
+  const { migrationStatus } = useMigration(canisterActorState, invalidateAll);
   const migrationToastShownRef = useRef(false);
   useEffect(() => {
     if (migrationStatus === "running" && !migrationToastShownRef.current) {

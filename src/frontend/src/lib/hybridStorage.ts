@@ -426,18 +426,26 @@ export function saveClinicalEntitiesWithSync<
     };
     const method = bulkMethodMap[syncType];
     if (method && typeof actor[method] === "function") {
-      (actor[method](items) as Promise<unknown>).catch((err: unknown) => {
-        console.warn(`[sync] Direct ${method} failed, queuing:`, err);
-        // Enqueue each item individually on failure
-        for (const item of items) {
-          enqueueSync({
-            timestamp: Date.now(),
-            type: syncType,
-            entityId: String((item as Record<string, unknown>).id ?? ""),
-            data: item,
-          });
+      // Fire async write but do not await (function is synchronous).
+      // On success: record last sync time. On failure: enqueue for retry.
+      void (async () => {
+        try {
+          await (actor[method](items) as Promise<unknown>);
+          // On success: record the last sync time
+          localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+        } catch (err: unknown) {
+          console.warn(`[sync] Direct ${method} failed, queuing:`, err);
+          // Enqueue each item on failure
+          for (const item of items) {
+            enqueueSync({
+              timestamp: Date.now(),
+              type: syncType,
+              entityId: String((item as Record<string, unknown>).id ?? ""),
+              data: item,
+            });
+          }
         }
-      });
+      })();
       return;
     }
   }
@@ -478,8 +486,13 @@ export function saveFrontPageContentWithSync(
     isNetworkOnline() &&
     typeof actor.saveFrontPageContent === "function"
   ) {
-    (actor.saveFrontPageContent(serialized) as Promise<unknown>).catch(
-      (err: unknown) => {
+    // Await the call so the enqueue happens synchronously on failure
+    void (async () => {
+      try {
+        await (actor.saveFrontPageContent(serialized) as Promise<unknown>);
+        // On success: record the last sync time
+        localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+      } catch (err: unknown) {
         console.warn("[sync] saveFrontPageContent failed, queuing:", err);
         enqueueSync({
           timestamp: Date.now(),
@@ -487,8 +500,8 @@ export function saveFrontPageContentWithSync(
           entityId: "frontPageContent",
           data: serialized,
         });
-      },
-    );
+      }
+    })();
   } else {
     enqueueSync({
       timestamp: Date.now(),
@@ -753,13 +766,14 @@ export async function bootstrapFromCanister(
       /* non-fatal */
     }
 
-    // ── Update timestamp ────────────────────────────────────────────────────
+    // ── Update timestamp ─────────────────────────────────────────────────
     try {
-      const ts = (
-        (await actor.getServerTimestamp) !== undefined
-          ? actor.getServerTimestamp()
-          : actor.getLastSyncTimestamp()
-      ) as bigint;
+      // Fix: check if the method exists before calling it (previously this
+      // awaited the function reference itself, which always returned the fn).
+      const ts =
+        typeof actor.getServerTimestamp === "function"
+          ? await (actor.getServerTimestamp() as Promise<bigint>)
+          : await (actor.getLastSyncTimestamp() as Promise<bigint>);
       setLastSyncTs(ts);
     } catch {
       setLastSyncTs(BigInt(Date.now()) * 1_000_000n);
@@ -1078,10 +1092,18 @@ function _mergeQueueEntries(entries: Array<Record<string, unknown>>): void {
 
 // ─── Flush sync queue ─────────────────────────────────────────────────────────
 
+/** Mutex flag — prevents concurrent flush calls from stomping each other */
+let _isSyncing = false;
+
+/** Maximum retry attempts per queue item before it is marked as permanently failed */
+const MAX_ITEM_RETRY = 5;
+
 /**
  * Flush all pending local writes to the canister using bulk upsert calls.
  * Groups items by type, sends bulk calls, and removes successfully synced items.
- * NEVER silently drops items — keeps retrying until success.
+ * Items that have failed MAX_ITEM_RETRY times are removed from the queue to
+ * prevent infinite loops; they are logged as errors.
+ * A mutex (_isSyncing) prevents concurrent flush runs.
  */
 export async function flushSyncQueue(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1091,10 +1113,47 @@ export async function flushSyncQueue(
     return { success: 0, failed: 0, pending: getPendingChangesCount() };
   }
 
-  const queue = loadSyncQueue();
+  // Mutex: skip if a flush is already running
+  if (_isSyncing) {
+    console.debug("[sync] flushSyncQueue skipped — already running");
+    return { success: 0, failed: 0, pending: getPendingChangesCount() };
+  }
+  _isSyncing = true;
+
+  try {
+    return await _doFlush(actor);
+  } finally {
+    _isSyncing = false;
+  }
+}
+
+async function _doFlush(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  actor: any,
+): Promise<{ success: number; failed: number; pending: number }> {
+  // Re-read queue inside the mutex so we have the freshest snapshot
+  let queue = loadSyncQueue();
   if (queue.length === 0) return { success: 0, failed: 0, pending: 0 };
 
-  // Group by type
+  // Expire items that have exceeded the retry ceiling
+  const expiredIds = new Set<string>();
+  const activeQueue = queue.filter((q) => {
+    if ((q.retryCount ?? 0) >= MAX_ITEM_RETRY) {
+      console.error(
+        `[sync] Dropping queue item after ${MAX_ITEM_RETRY} retries. type=${q.type ?? q.entityType} id=${q.id}`,
+        q.data,
+      );
+      expiredIds.add(q.id);
+      return false;
+    }
+    return true;
+  });
+  if (expiredIds.size > 0) {
+    saveSyncQueue(activeQueue);
+    queue = activeQueue;
+  }
+  if (queue.length === 0) return { success: 0, failed: 0, pending: 0 };
+
   const patients = queue.filter(
     (q) => q.type === "upsertPatient" || q.entityType === "patient",
   );
@@ -1217,85 +1276,108 @@ export async function flushSyncQueue(
   }
 
   // ── Bulk upsert observations ──────────────────────────────────────────────
+  // IMPORTANT: successfulIds.add() is ONLY called after the canister call returns
+  // success. If the method doesn't exist on the actor, items stay in the queue.
   const observations = queue.filter((q) => q.type === "upsertObservation");
   if (observations.length > 0) {
-    try {
-      const payloads = observations.map((q) => q.data);
-      if (typeof actor.bulkUpsertObservations === "function") {
-        await actor.bulkUpsertObservations(payloads);
-      }
-      for (const q of observations) {
-        const id =
-          q.entityId ?? String((q.data as Record<string, unknown>)?.id ?? "");
-        successfulIds.add(`upsertObservation:${id}`);
-      }
-      totalSuccess += observations.length;
-    } catch (err) {
-      console.warn("[sync] bulkUpsertObservations failed, will retry:", err);
+    if (typeof actor.bulkUpsertObservations !== "function") {
+      console.warn(
+        "[sync] bulkUpsertObservations not found on actor, skipping (will retry)",
+      );
       totalFailed += observations.length;
+    } else {
+      try {
+        const payloads = observations.map((q) => q.data);
+        await actor.bulkUpsertObservations(payloads);
+        // Only mark success AFTER confirmed write
+        for (const q of observations) {
+          const id =
+            q.entityId ?? String((q.data as Record<string, unknown>)?.id ?? "");
+          successfulIds.add(`upsertObservation:${id}`);
+        }
+        totalSuccess += observations.length;
+      } catch (err) {
+        console.warn("[sync] bulkUpsertObservations failed, will retry:", err);
+        totalFailed += observations.length;
+      }
     }
   }
 
   // ── Bulk upsert beds ──────────────────────────────────────────────────────
   const beds = queue.filter((q) => q.type === "upsertBed");
   if (beds.length > 0) {
-    try {
-      const payloads = beds.map((q) => q.data);
-      if (typeof actor.bulkUpsertBeds === "function") {
-        await actor.bulkUpsertBeds(payloads);
-      }
-      for (const q of beds) {
-        const id =
-          q.entityId ?? String((q.data as Record<string, unknown>)?.id ?? "");
-        successfulIds.add(`upsertBed:${id}`);
-      }
-      totalSuccess += beds.length;
-    } catch (err) {
-      console.warn("[sync] bulkUpsertBeds failed, will retry:", err);
+    if (typeof actor.bulkUpsertBeds !== "function") {
+      console.warn(
+        "[sync] bulkUpsertBeds not found on actor, skipping (will retry)",
+      );
       totalFailed += beds.length;
+    } else {
+      try {
+        const payloads = beds.map((q) => q.data);
+        await actor.bulkUpsertBeds(payloads);
+        for (const q of beds) {
+          const id =
+            q.entityId ?? String((q.data as Record<string, unknown>)?.id ?? "");
+          successfulIds.add(`upsertBed:${id}`);
+        }
+        totalSuccess += beds.length;
+      } catch (err) {
+        console.warn("[sync] bulkUpsertBeds failed, will retry:", err);
+        totalFailed += beds.length;
+      }
     }
   }
 
   // ── Bulk upsert daily progress notes ─────────────────────────────────────
   const dailyNotes = queue.filter((q) => q.type === "upsertDailyProgressNote");
   if (dailyNotes.length > 0) {
-    try {
-      const payloads = dailyNotes.map((q) => q.data);
-      if (typeof actor.bulkUpsertDailyProgressNotes === "function") {
-        await actor.bulkUpsertDailyProgressNotes(payloads);
-      }
-      for (const q of dailyNotes) {
-        const id =
-          q.entityId ?? String((q.data as Record<string, unknown>)?.id ?? "");
-        successfulIds.add(`upsertDailyProgressNote:${id}`);
-      }
-      totalSuccess += dailyNotes.length;
-    } catch (err) {
+    if (typeof actor.bulkUpsertDailyProgressNotes !== "function") {
       console.warn(
-        "[sync] bulkUpsertDailyProgressNotes failed, will retry:",
-        err,
+        "[sync] bulkUpsertDailyProgressNotes not found on actor, skipping (will retry)",
       );
       totalFailed += dailyNotes.length;
+    } else {
+      try {
+        const payloads = dailyNotes.map((q) => q.data);
+        await actor.bulkUpsertDailyProgressNotes(payloads);
+        for (const q of dailyNotes) {
+          const id =
+            q.entityId ?? String((q.data as Record<string, unknown>)?.id ?? "");
+          successfulIds.add(`upsertDailyProgressNote:${id}`);
+        }
+        totalSuccess += dailyNotes.length;
+      } catch (err) {
+        console.warn(
+          "[sync] bulkUpsertDailyProgressNotes failed, will retry:",
+          err,
+        );
+        totalFailed += dailyNotes.length;
+      }
     }
   }
 
   // ── Bulk upsert handovers ─────────────────────────────────────────────────
   const handovers = queue.filter((q) => q.type === "upsertHandover");
   if (handovers.length > 0) {
-    try {
-      const payloads = handovers.map((q) => q.data);
-      if (typeof actor.bulkUpsertHandovers === "function") {
-        await actor.bulkUpsertHandovers(payloads);
-      }
-      for (const q of handovers) {
-        const id =
-          q.entityId ?? String((q.data as Record<string, unknown>)?.id ?? "");
-        successfulIds.add(`upsertHandover:${id}`);
-      }
-      totalSuccess += handovers.length;
-    } catch (err) {
-      console.warn("[sync] bulkUpsertHandovers failed, will retry:", err);
+    if (typeof actor.bulkUpsertHandovers !== "function") {
+      console.warn(
+        "[sync] bulkUpsertHandovers not found on actor, skipping (will retry)",
+      );
       totalFailed += handovers.length;
+    } else {
+      try {
+        const payloads = handovers.map((q) => q.data);
+        await actor.bulkUpsertHandovers(payloads);
+        for (const q of handovers) {
+          const id =
+            q.entityId ?? String((q.data as Record<string, unknown>)?.id ?? "");
+          successfulIds.add(`upsertHandover:${id}`);
+        }
+        totalSuccess += handovers.length;
+      } catch (err) {
+        console.warn("[sync] bulkUpsertHandovers failed, will retry:", err);
+        totalFailed += handovers.length;
+      }
     }
   }
 
@@ -1304,23 +1386,28 @@ export async function flushSyncQueue(
     (q) => q.type === "upsertMedicationAdministration",
   );
   if (marRecords.length > 0) {
-    try {
-      const payloads = marRecords.map((q) => q.data);
-      if (typeof actor.bulkUpsertMedicationAdministrations === "function") {
-        await actor.bulkUpsertMedicationAdministrations(payloads);
-      }
-      for (const q of marRecords) {
-        const id =
-          q.entityId ?? String((q.data as Record<string, unknown>)?.id ?? "");
-        successfulIds.add(`upsertMedicationAdministration:${id}`);
-      }
-      totalSuccess += marRecords.length;
-    } catch (err) {
+    if (typeof actor.bulkUpsertMedicationAdministrations !== "function") {
       console.warn(
-        "[sync] bulkUpsertMedicationAdministrations failed, will retry:",
-        err,
+        "[sync] bulkUpsertMedicationAdministrations not found on actor, skipping (will retry)",
       );
       totalFailed += marRecords.length;
+    } else {
+      try {
+        const payloads = marRecords.map((q) => q.data);
+        await actor.bulkUpsertMedicationAdministrations(payloads);
+        for (const q of marRecords) {
+          const id =
+            q.entityId ?? String((q.data as Record<string, unknown>)?.id ?? "");
+          successfulIds.add(`upsertMedicationAdministration:${id}`);
+        }
+        totalSuccess += marRecords.length;
+      } catch (err) {
+        console.warn(
+          "[sync] bulkUpsertMedicationAdministrations failed, will retry:",
+          err,
+        );
+        totalFailed += marRecords.length;
+      }
     }
   }
 
@@ -1329,48 +1416,76 @@ export async function flushSyncQueue(
   if (fpItems.length > 0) {
     // Only send the latest item (they're deduplicated by entityId = "frontPageContent")
     const latest = fpItems[fpItems.length - 1];
-    try {
-      if (typeof actor.saveFrontPageContent === "function") {
-        await actor.saveFrontPageContent(latest.data as string);
-      }
-      for (const q of fpItems) {
-        successfulIds.add(
-          `upsertFrontPageContent:${q.entityId ?? "frontPageContent"}`,
-        );
-      }
-      totalSuccess += fpItems.length;
-    } catch (err) {
-      console.warn("[sync] saveFrontPageContent failed, will retry:", err);
+    if (typeof actor.saveFrontPageContent !== "function") {
+      console.warn(
+        "[sync] saveFrontPageContent not found on actor, skipping (will retry)",
+      );
       totalFailed += fpItems.length;
+    } else {
+      try {
+        await actor.saveFrontPageContent(latest.data as string);
+        // Only mark success AFTER confirmed write
+        for (const q of fpItems) {
+          successfulIds.add(
+            `upsertFrontPageContent:${q.entityId ?? "frontPageContent"}`,
+          );
+        }
+        totalSuccess += fpItems.length;
+      } catch (err) {
+        console.warn("[sync] saveFrontPageContent failed, will retry:", err);
+        totalFailed += fpItems.length;
+      }
     }
   }
 
-  // Remove successfully synced items from the queue
-  if (successfulIds.size > 0) {
-    const remaining = queue.filter((q) => {
-      const type =
-        q.type ??
-        (q.entityType === "patient"
-          ? "upsertPatient"
-          : q.entityType === "visit"
-            ? "upsertVisit"
-            : q.entityType === "prescription"
-              ? "upsertPrescription"
-              : q.entityType === "appointment"
-                ? "upsertAppointment"
-                : "upsertQueueEntry");
-      const id =
-        q.entityId ?? String((q.data as Record<string, unknown>)?.id ?? "");
-      return !successfulIds.has(`${type}:${id}`);
-    });
-    saveSyncQueue(remaining);
-    if (totalSuccess > 0) {
-      localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
-      // Fire a custom event so the SyncStatusBadge updates immediately
-      window.dispatchEvent(
-        new CustomEvent("syncComplete", { detail: { flushed: totalSuccess } }),
-      );
+  // Remove successfully synced items from the queue; bump retryCount on failures.
+  const successSet = successfulIds;
+  const remaining = queue.filter((q) => {
+    const type =
+      q.type ??
+      (q.entityType === "patient"
+        ? "upsertPatient"
+        : q.entityType === "visit"
+          ? "upsertVisit"
+          : q.entityType === "prescription"
+            ? "upsertPrescription"
+            : q.entityType === "appointment"
+              ? "upsertAppointment"
+              : "upsertQueueEntry");
+    const id =
+      q.entityId ?? String((q.data as Record<string, unknown>)?.id ?? "");
+    return !successSet.has(`${type}:${id}`);
+  });
+  // Increment retryCount for items that failed this cycle
+  const updatedRemaining = remaining.map((q) => {
+    const type =
+      q.type ??
+      (q.entityType === "patient"
+        ? "upsertPatient"
+        : q.entityType === "visit"
+          ? "upsertVisit"
+          : q.entityType === "prescription"
+            ? "upsertPrescription"
+            : q.entityType === "appointment"
+              ? "upsertAppointment"
+              : "upsertQueueEntry");
+    const id =
+      q.entityId ?? String((q.data as Record<string, unknown>)?.id ?? "");
+    // If this item was in the active queue (not new) and was NOT successful, it failed
+    const wasActive = queue.some((orig) => orig.id === q.id);
+    const wasSuccessful = successSet.has(`${type}:${id}`);
+    if (wasActive && !wasSuccessful && totalFailed > 0) {
+      return { ...q, retryCount: (q.retryCount ?? 0) + 1 };
     }
+    return q;
+  });
+  saveSyncQueue(updatedRemaining);
+  if (totalSuccess > 0) {
+    localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+    // Fire a custom event so the SyncStatusBadge updates immediately
+    window.dispatchEvent(
+      new CustomEvent("syncComplete", { detail: { flushed: totalSuccess } }),
+    );
   }
 
   const pending = loadSyncQueue().length;

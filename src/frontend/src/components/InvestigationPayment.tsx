@@ -60,6 +60,10 @@ interface InvestigationPaymentProps {
   registerNumber?: string;
   phone?: string;
   doctorName?: string;
+  /** Age in years — used on the investigation receipt */
+  patientAge?: number;
+  /** Biological sex — used on the investigation receipt */
+  patientSex?: "Male" | "Female" | "Other";
 }
 
 // ── Receipt Doc (printable) ───────────────────────────────────────────────────
@@ -182,6 +186,43 @@ function InvestigationReceiptDoc({
             {receipt.registerNumber || "—"}
           </p>
         </div>
+        {(receipt.patientAge != null || receipt.patientSex) && (
+          <div>
+            <p className="text-xs text-gray-500 mb-0.5">Age / Sex</p>
+            <p className="font-semibold text-gray-800">
+              {receipt.patientAge != null ? `${receipt.patientAge} yrs` : ""}
+              {receipt.patientAge != null && receipt.patientSex ? " · " : ""}
+              {receipt.patientSex ?? ""}
+            </p>
+          </div>
+        )}
+        {receipt.investigationDate && (
+          <div>
+            <p className="text-xs text-gray-500 mb-0.5">Investigation Date</p>
+            <p className="font-semibold text-gray-800">
+              {new Date(receipt.investigationDate).toLocaleDateString("en-BD", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })}
+            </p>
+          </div>
+        )}
+        {receipt.reportDeliveryDate && (
+          <div>
+            <p className="text-xs text-gray-500 mb-0.5">Report Delivery</p>
+            <p className="font-semibold text-purple-700">
+              {new Date(receipt.reportDeliveryDate).toLocaleDateString(
+                "en-BD",
+                {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                },
+              )}
+            </p>
+          </div>
+        )}
         {receipt.doctorName && (
           <div>
             <p className="text-xs text-gray-500 mb-0.5">Doctor / ডাক্তার</p>
@@ -522,6 +563,8 @@ function NewPaymentView({
   registerNumber,
   phone,
   doctorName,
+  patientAge,
+  patientSex,
   onReceiptGenerated,
 }: InvestigationPaymentProps & {
   onReceiptGenerated: (r: MoneyReceiptData) => void;
@@ -615,6 +658,8 @@ function NewPaymentView({
       registerNumber,
       phone,
       doctorName,
+      patientAge,
+      patientSex,
       service: investigations.map((i) => i.name).join(", "),
       amount: finalAmount,
       finalAmount,
@@ -625,6 +670,7 @@ function NewPaymentView({
       invoiceState: isPartial ? "partial" : "paid",
       paymentMethod,
       date: new Date().toISOString(),
+      investigationDate: new Date().toISOString().slice(0, 10),
       investigations,
       patientId,
     };
@@ -1088,6 +1134,8 @@ export default function InvestigationPayment({
   registerNumber,
   phone,
   doctorName,
+  patientAge,
+  patientSex,
 }: InvestigationPaymentProps) {
   const [view, setView] = useState<"new" | "history">("new");
   const [previewReceipt, setPreviewReceipt] = useState<MoneyReceiptData | null>(
@@ -1132,6 +1180,8 @@ export default function InvestigationPayment({
           registerNumber={registerNumber}
           phone={phone}
           doctorName={doctorName}
+          patientAge={patientAge}
+          patientSex={patientSex}
           onReceiptGenerated={(r) => {
             setPreviewReceipt(r);
           }}

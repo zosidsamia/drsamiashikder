@@ -43,12 +43,15 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Download,
   Edit,
   ExternalLink,
   FileText,
   Heart,
+  ImageIcon,
   Loader2,
   Mail,
   MapPin,
@@ -67,6 +70,7 @@ import {
   Users,
   X,
   Youtube,
+  ZoomIn,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -282,11 +286,42 @@ function ClassroomContent({
   );
 
   // Auto-switch to tab with most results when searching
+  // Gallery lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIdx, setLightboxIdx] = useState(0);
+
+  // Gallery data from classroom content
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const galleryImages: Array<{
+    id: string;
+    dataUrl: string;
+    caption: string;
+    category: string;
+  }> = ((cls.gallery as any[]) ?? []).map(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (g: any) => ({
+      id: g.id ?? "",
+      dataUrl: g.dataUrl ?? "",
+      caption: g.caption ?? "",
+      category: g.category ?? "",
+    }),
+  );
+
+  const openLightbox = (idx: number) => {
+    setLightboxIdx(idx);
+    setLightboxOpen(true);
+  };
+  const prevImg = () =>
+    setLightboxIdx((i) => (i === 0 ? galleryImages.length - 1 : i - 1));
+  const nextImg = () =>
+    setLightboxIdx((i) => (i === galleryImages.length - 1 ? 0 : i + 1));
+
   const tabCounts = {
     announcements: filteredAnn.length,
     notes: filteredNotes.length,
     videos: filteredVideos.length,
     schedule: filteredSchedule.length,
+    gallery: galleryImages.length,
   };
   const defaultTab = q
     ? (Object.entries(tabCounts).sort((a, b) => b[1] - a[1])[0][0] as string)
@@ -442,6 +477,18 @@ function ClassroomContent({
   const sortedVideos = [...filteredVideos].sort(
     (a: any, b: any) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0),
   );
+  // Gallery lightbox keyboard nav
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") setLightboxIdx((i) => Math.max(0, i - 1));
+      if (e.key === "ArrowRight")
+        setLightboxIdx((i) => Math.min(galleryImages.length - 1, i + 1));
+      if (e.key === "Escape") setLightboxOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxOpen, galleryImages.length]);
 
   return (
     <div className="space-y-4">
@@ -498,6 +545,12 @@ function ClassroomContent({
               label: "Class Schedule",
               count: tabCounts.schedule,
               icon: <CalendarDays className="w-3.5 h-3.5" />,
+            },
+            {
+              value: "gallery",
+              label: "Gallery",
+              count: tabCounts.gallery,
+              icon: <ImageIcon className="w-3.5 h-3.5" />,
             },
           ].map((tab) => (
             <TabsTrigger
@@ -1474,6 +1527,170 @@ function ClassroomContent({
               </div>
             </DialogContent>
           </Dialog>
+        </TabsContent>
+        {/* ── Gallery Tab ──────────────────────────────────────────────────────── */}
+        <TabsContent value="gallery" className="space-y-3">
+          {galleryImages.length === 0 ? (
+            <p
+              className="text-sm text-muted-foreground text-center py-8"
+              data-ocid="classroom.gallery.empty_state"
+            >
+              {canEdit
+                ? "No gallery images yet. Add some in Settings → Classroom → Gallery."
+                : "No gallery images yet."}
+            </p>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground text-right">
+                {galleryImages.length} image
+                {galleryImages.length !== 1 ? "s" : ""}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {galleryImages.map((img, idx) => (
+                  <motion.div
+                    key={img.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                    className="group relative rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => openLightbox(idx)}
+                    data-ocid={`classroom.gallery.item.${idx + 1}`}
+                  >
+                    <img
+                      src={img.dataUrl}
+                      alt={img.caption || `Gallery image ${idx + 1}`}
+                      className="w-full aspect-[4/3] object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                    />
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors flex items-center justify-center">
+                      <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-90 transition-opacity" />
+                    </div>
+                    {/* Caption bar */}
+                    <div className="bg-background/90 backdrop-blur-sm px-3 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs text-foreground/80 truncate">
+                          {img.caption || ""}
+                        </p>
+                        {img.category && (
+                          <span
+                            className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-medium border ${
+                              img.category === "Medical"
+                                ? "bg-red-50 text-red-700 border-red-200"
+                                : img.category === "Educational"
+                                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                                  : img.category === "Event"
+                                    ? "bg-purple-50 text-purple-700 border-purple-200"
+                                    : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            }`}
+                          >
+                            {img.category}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Lightbox */}
+              <AnimatePresence>
+                {lightboxOpen && galleryImages[lightboxIdx] && (
+                  <motion.div
+                    key="lightbox"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4"
+                    onClick={() => setLightboxOpen(false)}
+                    data-ocid="classroom.gallery.dialog"
+                  >
+                    {/* Close button */}
+                    <button
+                      type="button"
+                      className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                      onClick={() => setLightboxOpen(false)}
+                      aria-label="Close lightbox"
+                      data-ocid="classroom.gallery.close_button"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+
+                    {/* Prev */}
+                    {galleryImages.length > 1 && (
+                      <button
+                        type="button"
+                        className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          prevImg();
+                        }}
+                        aria-label="Previous image"
+                        data-ocid="classroom.gallery.pagination_prev"
+                      >
+                        <ChevronLeft className="w-6 h-6" />
+                      </button>
+                    )}
+
+                    {/* Image */}
+                    <motion.div
+                      key={lightboxIdx}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="relative max-w-4xl max-h-[85vh] flex flex-col items-center gap-3"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <img
+                        src={galleryImages[lightboxIdx].dataUrl}
+                        alt={
+                          galleryImages[lightboxIdx].caption ||
+                          `Gallery image ${lightboxIdx + 1}`
+                        }
+                        className="max-h-[70vh] max-w-full object-contain rounded-xl shadow-2xl"
+                      />
+                      {(galleryImages[lightboxIdx].caption ||
+                        galleryImages[lightboxIdx].category) && (
+                        <div className="flex items-center gap-2 bg-black/50 rounded-lg px-4 py-2">
+                          {galleryImages[lightboxIdx].caption && (
+                            <p className="text-white text-sm">
+                              {galleryImages[lightboxIdx].caption}
+                            </p>
+                          )}
+                          {galleryImages[lightboxIdx].category && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-white/20 text-white">
+                              {galleryImages[lightboxIdx].category}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <p className="text-white/50 text-xs">
+                        {lightboxIdx + 1} / {galleryImages.length}
+                      </p>
+                    </motion.div>
+
+                    {/* Next */}
+                    {galleryImages.length > 1 && (
+                      <button
+                        type="button"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          nextImg();
+                        }}
+                        aria-label="Next image"
+                        data-ocid="classroom.gallery.pagination_next"
+                      >
+                        <ChevronRight className="w-6 h-6" />
+                      </button>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          )}
         </TabsContent>
       </Tabs>
     </div>
@@ -3414,12 +3631,24 @@ export default function LandingPage({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
           >
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-3 leading-tight drop-shadow-lg">
               {siteConfig.heroSection.taglineEn}
             </h1>
-            <p className="text-blue-100 text-lg sm:text-xl max-w-2xl mx-auto mb-8">
+            <p className="text-blue-100 text-xl sm:text-2xl font-semibold mb-2">
               {siteConfig.heroSection.subheadingEn}
             </p>
+            {siteConfig.heroSection.heroTaglineEn && (
+              <p className="text-blue-200 text-base sm:text-lg italic font-medium mb-3">
+                {siteConfig.heroSection.heroTaglineEn}
+              </p>
+            )}
+            {siteConfig.heroSection.heroDescriptionEn ? (
+              <p className="text-blue-100/90 text-sm sm:text-base max-w-2xl mx-auto mb-8">
+                {siteConfig.heroSection.heroDescriptionEn}
+              </p>
+            ) : (
+              <div className="mb-8" />
+            )}
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 type="button"
@@ -3942,8 +4171,8 @@ export default function LandingPage({
               const chambers = (doc.chambers as any[]) || [];
               const accentColor =
                 key === "arman" ? "text-primary" : "text-rose-600";
-              const bg = key === "arman" ? "bg-primary/10" : "bg-rose-100";
-              const border =
+              const _bg = key === "arman" ? "bg-primary/10" : "bg-rose-100";
+              const _border =
                 key === "arman" ? "border-primary/30" : "border-rose-300";
               return (
                 <motion.div
@@ -3995,87 +4224,126 @@ export default function LandingPage({
                     const encodedAddr = encodeURIComponent(
                       chamber.address || chamber.addressBn || "",
                     );
+                    const gradients =
+                      key === "arman"
+                        ? [
+                            "from-blue-600 to-indigo-700",
+                            "from-teal-500 to-cyan-600",
+                            "from-violet-600 to-purple-700",
+                          ]
+                        : [
+                            "from-rose-500 to-pink-600",
+                            "from-amber-500 to-orange-600",
+                            "from-emerald-500 to-green-600",
+                          ];
+                    const gradClass = gradients[cIdx % gradients.length];
+                    const accentBtn =
+                      key === "arman"
+                        ? cIdx % 3 === 0
+                          ? "border-blue-400 text-blue-700 hover:bg-blue-50"
+                          : cIdx % 3 === 1
+                            ? "border-teal-400 text-teal-700 hover:bg-teal-50"
+                            : "border-violet-400 text-violet-700 hover:bg-violet-50"
+                        : cIdx % 3 === 0
+                          ? "border-rose-400 text-rose-700 hover:bg-rose-50"
+                          : cIdx % 3 === 1
+                            ? "border-amber-400 text-amber-700 hover:bg-amber-50"
+                            : "border-emerald-400 text-emerald-700 hover:bg-emerald-50";
+                    const iconColorClass =
+                      key === "arman"
+                        ? cIdx % 3 === 0
+                          ? "text-blue-600"
+                          : cIdx % 3 === 1
+                            ? "text-teal-600"
+                            : "text-violet-600"
+                        : cIdx % 3 === 0
+                          ? "text-rose-600"
+                          : cIdx % 3 === 1
+                            ? "text-amber-600"
+                            : "text-emerald-600";
                     return (
                       <Card
                         key={chamberId}
                         ref={(el) => {
                           chamberRefs.current[chamberId] = el;
                         }}
-                        className={`border-2 ${border} transition-all duration-500 ${isNearest ? "ring-2 ring-emerald-400 shadow-lg" : ""}`}
+                        className={`overflow-hidden border-0 shadow-md transition-all duration-500 ${isNearest ? "ring-2 ring-emerald-400 shadow-xl" : "hover:shadow-lg"}`}
                       >
-                        <CardHeader className="pb-3">
-                          <CardTitle
-                            className={`flex items-center justify-between gap-2 ${accentColor} text-base`}
-                          >
-                            <span className="flex items-center gap-2">
-                              {chamber.nameBn || chamber.address}
+                        {/* Gradient header */}
+                        <div
+                          className={`bg-gradient-to-r ${gradClass} px-5 py-4 flex items-center justify-between`}
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <MapPin className="w-5 h-5 text-white/80 shrink-0" />
+                            <div className="min-w-0">
+                              <span className="font-bold text-white text-base leading-tight block truncate">
+                                {chamber.nameBn || chamber.address}
+                              </span>
                               {isNearest && (
-                                <span className="inline-flex items-center gap-1 text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-full px-2 py-0.5">
-                                  <MapPin className="w-3 h-3" />
-                                  Nearest to you
+                                <span className="inline-flex items-center gap-1 text-xs font-semibold bg-white/20 text-white rounded-full px-2 py-0.5 mt-0.5">
+                                  <MapPin className="w-3 h-3" /> Nearest to you
                                 </span>
                               )}
-                            </span>
-                            {isAdmin && (
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 w-7 p-0 opacity-70 hover:opacity-100"
-                                  onClick={() => {
-                                    setChamberEditForm({
-                                      id: chamber.id || String(cIdx),
-                                      nameBn: chamber.nameBn || "",
-                                      addressBn: chamber.addressBn || "",
-                                      address: chamber.address || "",
-                                      visitingHours:
-                                        chamber.visitingHours || "",
-                                      phone: chamber.phone || "",
-                                      emergencyPhone:
-                                        chamber.emergencyPhone || "",
-                                      lat:
-                                        chamber.lat != null
-                                          ? String(chamber.lat)
-                                          : "",
-                                      lng:
-                                        chamber.lng != null
-                                          ? String(chamber.lng)
-                                          : "",
-                                    });
-                                    setEditChamberIdx(cIdx);
-                                    setEditChamberKey(key);
-                                  }}
-                                  data-ocid="chamber.edit_button"
-                                >
-                                  <Edit className="w-3.5 h-3.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 w-7 p-0 opacity-70 hover:opacity-100 text-destructive hover:text-destructive"
-                                  disabled={chambers.length <= 1}
-                                  onClick={() => {
-                                    if (!confirm("Delete this chamber?"))
-                                      return;
-                                    const updated = chambers.filter(
+                            </div>
+                          </div>
+                          {isAdmin && (
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-white/80 hover:text-white hover:bg-white/20"
+                                onClick={() => {
+                                  setChamberEditForm({
+                                    id: chamber.id || String(cIdx),
+                                    nameBn: chamber.nameBn || "",
+                                    addressBn: chamber.addressBn || "",
+                                    address: chamber.address || "",
+                                    visitingHours: chamber.visitingHours || "",
+                                    phone: chamber.phone || "",
+                                    emergencyPhone:
+                                      chamber.emergencyPhone || "",
+                                    lat:
+                                      chamber.lat != null
+                                        ? String(chamber.lat)
+                                        : "",
+                                    lng:
+                                      chamber.lng != null
+                                        ? String(chamber.lng)
+                                        : "",
+                                  });
+                                  setEditChamberIdx(cIdx);
+                                  setEditChamberKey(key);
+                                }}
+                                data-ocid="chamber.edit_button"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-white/70 hover:text-red-200 hover:bg-white/20"
+                                disabled={chambers.length <= 1}
+                                onClick={() => {
+                                  if (!confirm("Delete this chamber?")) return;
+                                  updateChambers(
+                                    key,
+                                    chambers.filter(
                                       (_: any, i: number) => i !== cIdx,
-                                    );
-                                    updateChambers(key, updated);
-                                  }}
-                                  data-ocid="chamber.delete_button"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
-                              </div>
-                            )}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          {/* Address block */}
-                          <div className={`p-4 rounded-xl ${bg}`}>
+                                    ),
+                                  );
+                                }}
+                                data-ocid="chamber.delete_button"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        <CardContent className="space-y-4 pt-4">
+                          <div className="p-3 rounded-xl bg-muted/40 border border-border">
                             <div className="flex items-start gap-3">
                               <MapPin
-                                className={`w-5 h-5 ${accentColor} shrink-0 mt-0.5`}
+                                className={`w-5 h-5 ${iconColorClass} shrink-0 mt-0.5`}
                               />
                               <div className="flex-1 min-w-0">
                                 {chamber.addressBn && (
@@ -4112,17 +4380,15 @@ export default function LandingPage({
                                     href={`https://www.google.com/maps/search/?api=1&query=${encodedAddr}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 mt-2 text-xs text-blue-500 hover:text-blue-700 transition-colors"
+                                    className={`inline-flex items-center gap-1 mt-2 text-xs font-medium ${iconColorClass} hover:opacity-80 transition-colors`}
                                     data-ocid="chamber.maps.link"
                                   >
-                                    <MapPin className="w-3 h-3" />
-                                    View on Map
+                                    <MapPin className="w-3 h-3" /> View on Map
                                   </a>
                                 )}
                               </div>
                             </div>
                           </div>
-                          {/* Embedded map */}
                           {(chamber.address || chamber.addressBn) && (
                             <div className="rounded-xl overflow-hidden border border-border shadow-sm">
                               <iframe
@@ -4137,7 +4403,6 @@ export default function LandingPage({
                               />
                             </div>
                           )}
-                          {/* Get Directions button */}
                           {(chamber.address || chamber.addressBn) && (
                             <a
                               href={`https://www.google.com/maps/dir/?api=1&destination=${encodedAddr}`}
@@ -4149,12 +4414,8 @@ export default function LandingPage({
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className={`w-full gap-2 ${
-                                  key === "arman"
-                                    ? "border-primary/40 text-primary hover:bg-primary/10"
-                                    : "border-rose-300 text-rose-600 hover:bg-rose-50"
-                                } transition-colors`}
                                 type="button"
+                                className={`w-full gap-2 font-semibold ${accentBtn} transition-colors`}
                               >
                                 <Navigation className="w-4 h-4" />
                                 Get Directions
@@ -4170,12 +4431,11 @@ export default function LandingPage({
                               </Button>
                             </a>
                           )}
-                          {/* Visiting hours, phone, email, emergency */}
                           <div className="space-y-3">
                             {chamber.visitingHours && (
                               <div className="flex items-center gap-3">
                                 <Clock
-                                  className={`w-4 h-4 ${accentColor} shrink-0`}
+                                  className={`w-4 h-4 ${iconColorClass} shrink-0`}
                                 />
                                 <div>
                                   <p className="text-xs text-muted-foreground">
@@ -4190,7 +4450,7 @@ export default function LandingPage({
                             {chamber.phone && (
                               <div className="flex items-center gap-3">
                                 <Phone
-                                  className={`w-4 h-4 ${accentColor} shrink-0`}
+                                  className={`w-4 h-4 ${iconColorClass} shrink-0`}
                                 />
                                 <div>
                                   <p className="text-xs text-muted-foreground">
@@ -4204,7 +4464,7 @@ export default function LandingPage({
                             )}
                             <div className="flex items-center gap-3">
                               <Mail
-                                className={`w-4 h-4 ${accentColor} shrink-0`}
+                                className={`w-4 h-4 ${iconColorClass} shrink-0`}
                               />
                               <div>
                                 <p className="text-xs text-muted-foreground">
@@ -4218,7 +4478,7 @@ export default function LandingPage({
                             {chamber.emergencyPhone && (
                               <div className="flex items-center gap-3">
                                 <PhoneCall
-                                  className={`w-4 h-4 ${accentColor} shrink-0`}
+                                  className={`w-4 h-4 ${iconColorClass} shrink-0`}
                                 />
                                 <div>
                                   <p className="text-xs text-muted-foreground">

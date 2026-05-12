@@ -29,9 +29,9 @@ export default function SyncStatusBadge() {
       }
     }
 
-    // Poll every 3s
+    // Poll every 15s (not 3s — 3s is too aggressive and causes rate limiting)
     updateState();
-    const iv = setInterval(updateState, 3000);
+    const iv = setInterval(updateState, 15_000);
 
     // Listen for online/offline events
     window.addEventListener("online", updateState);
@@ -40,9 +40,16 @@ export default function SyncStatusBadge() {
     // Listen for syncComplete custom event from flushSyncQueue
     const handleSyncComplete = (e: Event) => {
       const detail = (e as CustomEvent<{ flushed: number }>).detail;
-      setState("synced");
-      setPendingCount(0);
-      prevPendingRef.current = 0;
+      // Re-read the actual queue rather than blindly setting to 0,
+      // in case some items failed and remain in the queue.
+      const remaining = getPendingChangesCount();
+      setPendingCount(remaining);
+      if (remaining === 0) {
+        setState("synced");
+        prevPendingRef.current = 0;
+      } else {
+        setState("pending");
+      }
       if (detail.flushed > 0) {
         toast.success("All changes synced", {
           id: "sync-complete",

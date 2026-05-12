@@ -7,15 +7,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  type MigrationProgress,
   bootstrapFromCanister,
   doSyncCycle,
+  flushSyncQueue,
+  getPendingChangesCount,
+  getSyncStatus,
   isMigrationDone,
   isNetworkOnline,
   markMigrationDone,
   recordSyncHeartbeat,
   runMigration,
 } from "../lib/hybridStorage";
+import type { MigrationProgress, SyncStatus } from "../lib/hybridStorage";
 
 export type MigrationStatus = "idle" | "running" | "complete" | "failed";
 
@@ -56,6 +59,8 @@ export function useMigration(
   const [progress, setProgress] = useState<MigrationProgress>(DEFAULT_PROGRESS);
   const hasRunMigrationRef = useRef(false);
   const hasBootstrappedRef = useRef(false);
+  const bootstrapRetryCountRef = useRef(0);
+  const MAX_BOOTSTRAP_RETRIES = 5;
   const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── One-time migration: localStorage → canister ──────────────────────────
@@ -94,13 +99,30 @@ export function useMigration(
   // ── Bootstrap: full canister hydration on first actor load ───────────────
   const doBootstrap = useCallback(async () => {
     if (!actor || hasBootstrappedRef.current || !isNetworkOnline()) return;
+    if (bootstrapRetryCountRef.current >= MAX_BOOTSTRAP_RETRIES) {
+      console.error(
+        `[sync] Bootstrap abandoned after ${MAX_BOOTSTRAP_RETRIES} attempts. Will retry on next online/focus event.`,
+      );
+      return;
+    }
     hasBootstrappedRef.current = true;
     try {
       await bootstrapFromCanister(actor);
+      bootstrapRetryCountRef.current = 0; // reset on success
       if (invalidateAll) invalidateAll();
     } catch (err) {
-      console.error("[sync] Bootstrap failed:", err);
+      bootstrapRetryCountRef.current += 1;
+      const attempt = bootstrapRetryCountRef.current;
+      console.error(
+        `[sync] Bootstrap attempt ${attempt}/${MAX_BOOTSTRAP_RETRIES} failed:`,
+        err,
+      );
       hasBootstrappedRef.current = false; // allow retry
+      if (attempt < MAX_BOOTSTRAP_RETRIES) {
+        // Exponential backoff: 2s, 4s, 8s, 16s, 30s cap
+        const backoffMs = Math.min(1000 * 2 ** attempt, 30_000);
+        setTimeout(() => void doBootstrap(), backoffMs);
+      }
     }
   }, [actor, invalidateAll]);
 
@@ -145,6 +167,22 @@ export function useMigration(
     return () => clearTimeout(t);
   }, [actor, doBootstrap]);
 
+  // ── Immediate flush on actor ready: drain any pre-existing queue immediately ─
+  // This ensures items queued while offline are sent as soon as the actor is
+  // ready, without waiting for the first sync cycle timer to fire.
+  useEffect(() => {
+    if (!actor) return;
+    const pending = getPendingChangesCount();
+    if (pending > 0) {
+      console.info(
+        `[sync] Actor ready — flushing ${pending} pending items immediately.`,
+      );
+      void flushSyncQueue(actor).then((result) => {
+        if (result.success > 0 && invalidateAll) invalidateAll();
+      });
+    }
+    // Run when actor or invalidateAll changes so the flush uses the latest invalidate callback.
+  }, [actor, invalidateAll]);
   // ── Polling loop: runs every 15s ─────────────────────────────────────────
   useEffect(() => {
     if (!actor) return;
@@ -171,6 +209,10 @@ export function useMigration(
       // Retry migration if not done
       if (!isMigrationDone() && !hasRunMigrationRef.current) {
         void doMigration();
+      }
+      // On coming back online, clear the retry limit so bootstrap can attempt again
+      if (bootstrapRetryCountRef.current >= MAX_BOOTSTRAP_RETRIES) {
+        bootstrapRetryCountRef.current = 0;
       }
       // Bootstrap if last sync is stale (> 5 min)
       if (getLastSyncAgeMs() > BOOTSTRAP_STALE_MS) {
@@ -215,15 +257,12 @@ export function useMigration(
 
 // ── Offline queue size hook ───────────────────────────────────────────────────
 
-import { getPendingChangesCount, getSyncStatus } from "../lib/hybridStorage";
-import type { SyncStatus } from "../lib/hybridStorage";
-
 export function useSyncStatus(): SyncStatus {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(getSyncStatus());
 
   useEffect(() => {
     const update = () => setSyncStatus(getSyncStatus());
-    const iv = setInterval(update, 3000);
+    const iv = setInterval(update, 15_000);
     window.addEventListener("online", update);
     window.addEventListener("offline", update);
     return () => {

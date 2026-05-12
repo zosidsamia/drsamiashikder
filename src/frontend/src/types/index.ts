@@ -43,7 +43,7 @@ export function canVerifyVitals(role: StaffRole): boolean {
 }
 
 export const STAFF_ROLE_LABELS: Record<
-  Exclude<StaffRole, "admin" | "patient">,
+  Exclude<StaffRole, "admin" | "patient" | "doctor">,
   string
 > = {
   consultant_doctor: "Consultant Doctor",
@@ -51,7 +51,6 @@ export const STAFF_ROLE_LABELS: Record<
   intern_doctor: "Intern Doctor",
   nurse: "Nurse",
   staff: "Staff / Reception",
-  doctor: "Consultant Doctor",
   assistant_registrar: "Assistant Registrar",
   registrar: "Registrar",
   assistant_professor: "Assistant Professor",
@@ -67,7 +66,6 @@ export const ROLE_HIERARCHY_ORDER: Exclude<StaffRole, "admin" | "patient">[] = [
   "assistant_registrar",
   "registrar",
   "consultant_doctor",
-  "doctor",
   "assistant_professor",
   "associate_professor",
   "professor",
@@ -826,6 +824,11 @@ export interface MoneyReceiptData {
   dueAmount?: number;
   /** Refund details */
   refund?: RefundRecord;
+  /** Walk-in / investigation-specific patient fields */
+  patientAge?: number;
+  patientSex?: "Male" | "Female" | "Other";
+  investigationDate?: string; // ISO date string
+  reportDeliveryDate?: string; // ISO date string
 }
 
 export interface DrugReminder {

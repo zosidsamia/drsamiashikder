@@ -25,9 +25,13 @@ import {
   Bell,
   BookOpen,
   Calendar,
+  ChevronDown,
+  ChevronUp,
   Edit2,
   ExternalLink,
   FileText,
+  Image,
+  ImageIcon,
   MonitorPlay,
   Pin,
   Plus,
@@ -36,7 +40,7 @@ import {
   Trash2,
   Video,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -97,6 +101,281 @@ const DAYS = [
   "Saturday",
   "Sunday",
 ];
+
+// ── Classroom Gallery Types ──────────────────────────────────────────────────
+
+export interface ClassroomGalleryImage {
+  id: string;
+  dataUrl: string;
+  caption: string;
+  category: "Medical" | "Educational" | "Event" | "Facility" | "";
+}
+
+// ── Gallery Section (Admin) ───────────────────────────────────────────────────
+
+function ClassroomGallerySection({
+  items,
+  onSave,
+}: {
+  items: ClassroomGalleryImage[];
+  onSave: (items: ClassroomGalleryImage[]) => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [editCaptionId, setEditCaptionId] = useState<string | null>(null);
+  const [captionDraft, setCaptionDraft] = useState("");
+  const [categoryDraft, setCategoryDraft] =
+    useState<ClassroomGalleryImage["category"]>("");
+
+  const handleFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    const readers: Promise<ClassroomGalleryImage>[] = [];
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith("image/")) continue;
+      readers.push(
+        new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            resolve({
+              id: uid(),
+              dataUrl: e.target?.result as string,
+              caption: file.name.replace(/\.[^.]+$/, ""),
+              category: "",
+            });
+          };
+          reader.readAsDataURL(file);
+        }),
+      );
+    }
+    Promise.all(readers).then((newImgs) => {
+      onSave([...items, ...newImgs]);
+      setUploading(false);
+      toast.success(`${newImgs.length} image(s) added to gallery.`);
+    });
+  };
+
+  const startEdit = (img: ClassroomGalleryImage) => {
+    setEditCaptionId(img.id);
+    setCaptionDraft(img.caption);
+    setCategoryDraft(img.category);
+  };
+
+  const saveCaption = (id: string) => {
+    onSave(
+      items.map((img) =>
+        img.id === id
+          ? { ...img, caption: captionDraft, category: categoryDraft }
+          : img,
+      ),
+    );
+    setEditCaptionId(null);
+    toast.success("Image updated.");
+  };
+
+  const deleteImage = (id: string) => {
+    onSave(items.filter((img) => img.id !== id));
+    toast.success("Image removed.");
+  };
+
+  const moveUp = (idx: number) => {
+    if (idx === 0) return;
+    const arr = [...items];
+    [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+    onSave(arr);
+  };
+
+  const moveDown = (idx: number) => {
+    if (idx === items.length - 1) return;
+    const arr = [...items];
+    [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+    onSave(arr);
+  };
+
+  const CATEGORIES: ClassroomGalleryImage["category"][] = [
+    "",
+    "Medical",
+    "Educational",
+    "Event",
+    "Facility",
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Upload button */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          {items.length} image{items.length !== 1 ? "s" : ""} in classroom
+          gallery
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1.5"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          data-ocid="classroom.gallery.upload_button"
+        >
+          <Image className="w-3.5 h-3.5" />
+          Upload Images
+        </Button>
+      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => handleFiles(e.target.files)}
+      />
+
+      {/* Empty state — use button element so useSemanticElements is satisfied */}
+      {items.length === 0 && (
+        <button
+          type="button"
+          className="w-full border-2 border-dashed border-primary/30 rounded-xl p-10 text-center cursor-pointer hover:border-primary/60 transition-colors"
+          onClick={() => fileInputRef.current?.click()}
+          data-ocid="classroom.gallery.empty_state"
+        >
+          <ImageIcon className="w-10 h-10 mx-auto mb-2 text-muted-foreground/40" />
+          <p className="text-sm text-muted-foreground">
+            Drop images here or click to upload
+          </p>
+          <p className="text-xs text-muted-foreground/60 mt-1">
+            JPEG, PNG, WebP supported
+          </p>
+        </button>
+      )}
+
+      {/* Image list */}
+      {items.length > 0 && (
+        <div className="space-y-2">
+          {items.map((img, i) => (
+            <div
+              key={img.id}
+              className="bg-card border border-border rounded-xl p-3 flex gap-3 items-start"
+              data-ocid={`classroom.gallery.item.${i + 1}`}
+            >
+              {/* Thumbnail */}
+              <img
+                src={img.dataUrl}
+                alt={img.caption || `Gallery image ${i + 1}`}
+                className="w-20 h-16 object-cover rounded-lg shrink-0 border border-border"
+              />
+              {/* Info / edit */}
+              <div className="flex-1 min-w-0">
+                {editCaptionId === img.id ? (
+                  <div className="space-y-2">
+                    <Input
+                      value={captionDraft}
+                      onChange={(e) => setCaptionDraft(e.target.value)}
+                      placeholder="Caption (optional)"
+                      className="h-7 text-xs"
+                      data-ocid={`classroom.gallery.caption.input.${i + 1}`}
+                    />
+                    <Select
+                      value={categoryDraft}
+                      onValueChange={(v) =>
+                        setCategoryDraft(v as ClassroomGalleryImage["category"])
+                      }
+                    >
+                      <SelectTrigger className="h-7 text-xs">
+                        <SelectValue placeholder="Category (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map((c) => (
+                          <SelectItem key={c || "none"} value={c || "none"}>
+                            {c || "No category"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        className="h-6 text-xs gap-1"
+                        onClick={() => saveCaption(img.id)}
+                        data-ocid={`classroom.gallery.save_button.${i + 1}`}
+                      >
+                        <Save className="w-3 h-3" /> Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 text-xs"
+                        onClick={() => setEditCaptionId(null)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {img.caption || (
+                        <span className="text-muted-foreground italic">
+                          No caption
+                        </span>
+                      )}
+                    </p>
+                    {img.category && (
+                      <span className="inline-block mt-0.5 text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                        {img.category}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              {/* Actions */}
+              {editCaptionId !== img.id && (
+                <div className="flex flex-col gap-1 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={() => startEdit(img)}
+                    data-ocid={`classroom.gallery.edit_button.${i + 1}`}
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={() => moveUp(i)}
+                    disabled={i === 0}
+                    aria-label="Move up"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0"
+                    onClick={() => moveDown(i)}
+                    disabled={i === items.length - 1}
+                    aria-label="Move down"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                    onClick={() => deleteImage(img.id)}
+                    data-ocid={`classroom.gallery.delete_button.${i + 1}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Sub-sections ──────────────────────────────────────────────────────────────
 
@@ -1054,6 +1333,18 @@ export function ClassroomSettings({ doctorEmail }: { doctorEmail: string }) {
     }),
   );
 
+  const gallery: ClassroomGalleryImage[] =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ((classroom.gallery ?? []) as any[]).map(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (g: any, i: number) => ({
+        id: g.id ?? `legacy_gal_${i}`,
+        dataUrl: g.dataUrl ?? "",
+        caption: g.caption ?? "",
+        category: g.category ?? "",
+      }),
+    );
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -1062,8 +1353,8 @@ export function ClassroomSettings({ doctorEmail }: { doctorEmail: string }) {
           My Classroom
         </CardTitle>
         <CardDescription>
-          Manage announcements, lecture notes, video lectures, and class
-          schedule for your public classroom page.
+          Manage announcements, lecture notes, video lectures, class schedule,
+          and picture gallery for your public classroom page.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -1121,6 +1412,19 @@ export function ClassroomSettings({ doctorEmail }: { doctorEmail: string }) {
                 </Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger
+              value="gallery"
+              className="flex-1 gap-1.5 text-xs sm:text-sm"
+              data-ocid="classroom.gallery.tab"
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+              Gallery
+              {gallery.length > 0 && (
+                <Badge className="ml-1 bg-primary/10 text-primary border-primary/20 text-xs py-0 px-1.5">
+                  {gallery.length}
+                </Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="announcements">
@@ -1155,6 +1459,15 @@ export function ClassroomSettings({ doctorEmail }: { doctorEmail: string }) {
               items={schedule}
               onSave={(updated) =>
                 updateField(doctorKey, "classroom.schedule", updated)
+              }
+            />
+          </TabsContent>
+
+          <TabsContent value="gallery">
+            <ClassroomGallerySection
+              items={gallery}
+              onSave={(updated) =>
+                updateField(doctorKey, "classroom.gallery", updated)
               }
             />
           </TabsContent>
