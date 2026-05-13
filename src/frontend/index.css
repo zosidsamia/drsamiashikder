@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  src: url('/assets/fonts/BricolageGrotesque.woff2') format('woff2');
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/assets/fonts/PlusJakartaSans.woff2') format('woff2');
+  font-weight: 300 700;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --background: 0.985 0.002 240;
+    --foreground: 0.22 0.025 255;
+    --card: 1 0 0;
+    --card-foreground: 0.22 0.025 255;
+    --popover: 1 0 0;
+    --popover-foreground: 0.22 0.025 255;
+    --primary: 0.58 0.14 195;
+    --primary-foreground: 0.99 0 0;
+    --secondary: 0.94 0.03 195;
+    --secondary-foreground: 0.35 0.07 195;
+    --muted: 0.95 0.01 240;
+    --muted-foreground: 0.52 0.02 255;
+    --accent: 0.93 0.05 195;
+    --accent-foreground: 0.35 0.1 195;
+    --destructive: 0.57 0.22 25;
+    --destructive-foreground: 0.99 0 0;
+    --border: 0.9 0.01 240;
+    --input: 0.9 0.01 240;
+    --ring: 0.58 0.14 195;
+    --radius: 0.625rem;
+    --chart-1: 0.58 0.14 195;
+    --chart-2: 0.65 0.15 155;
+    --chart-3: 0.55 0.12 255;
+    --chart-4: 0.72 0.14 80;
+    --chart-5: 0.65 0.18 25;
+    --sidebar: 0.98 0.003 240;
+    --sidebar-foreground: 0.22 0.025 255;
+    --sidebar-primary: 0.58 0.14 195;
+    --sidebar-primary-foreground: 0.99 0 0;
+    --sidebar-accent: 0.93 0.05 195;
+    --sidebar-accent-foreground: 0.35 0.1 195;
+    --sidebar-border: 0.9 0.01 240;
+    --sidebar-ring: 0.58 0.14 195;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button,
+  [role="tab"],
+  [role="button"] {
+    @apply select-none;
+  }
+}
+
+@layer components {
+  .page-enter {
+    animation: pageEnter 0.3s ease-out;
+  }
+
+  @keyframes pageEnter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

@@ -1,0 +1,1110 @@
+type WardRoundPatientStatus = 
+ record {
+   activeAlerts: vec text;
+   admissionDay: nat;
+   assignedConsultant: opt text;
+   bedNumber: text;
+   lastVitals: opt VitalsSummary;
+   patientId: text;
+   patientName: text;
+   todayNoteState: opt text;
+   ward: text;
+ };
+type VitalsSummary = 
+ record {
+   bp: opt text;
+   pulse: opt text;
+   rbs: opt text;
+   recordedAt: int;
+   rr: opt text;
+   spo2: opt text;
+   temp: opt text;
+ };
+type VitalVerificationStatus = 
+ variant {
+   drafted;
+   finalized;
+   pendingMOReview;
+   rejected;
+   verifiedByMO;
+ };
+type VitalSigns = 
+ record {
+   bloodPressure: opt text;
+   oxygenSaturation: opt text;
+   pulse: opt text;
+   respiratoryRate: opt text;
+   temperature: opt text;
+ };
+type VisitType = 
+ variant {
+   admitted;
+   outdoor;
+ };
+type Visit = 
+ record {
+   chiefComplaint: text;
+   createdAt: Time;
+   diagnosis: opt text;
+   historyOfPresentIllness: opt text;
+   id: nat;
+   notes: opt text;
+   patientId: nat;
+   physicalExamination: opt text;
+   updatedAt: Time;
+   visitDate: Time;
+   visitType: VisitType;
+   vitalSigns: VitalSigns;
+ };
+type VersionedRecord = 
+ record {
+   changeReason: opt text;
+   createdAt: int;
+   createdBy: principal;
+   createdByName: text;
+   createdByRole: StaffRole;
+   version: nat;
+ };
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type UserProfile = record {name: text;};
+type UpdatedData = 
+ record {
+   appointments: vec Appointment;
+   patients: vec nat;
+   queueEntries: vec SerialQueueEntry;
+   timestamp: int;
+ };
+type Time = int;
+type SyncRecord = 
+ record {
+   deviceId: text;
+   id: nat;
+   lastEntityId: opt nat;
+   lastEntityType: opt text;
+   lastSyncAt: int;
+   pendingChanges: nat;
+   userId: principal;
+ };
+type SyncData = 
+ record {
+   appointments: vec Appointment;
+   queueEntries: vec SerialQueueEntry;
+   timestamp: int;
+ };
+type StaffRole = 
+ variant {
+   admin;
+   assistant_professor;
+   assistant_registrar;
+   associate_professor;
+   consultant_doctor;
+   doctor;
+   intern_doctor;
+   medical_officer;
+   nurse;
+   patient;
+   professor;
+   registrar;
+   staff;
+ };
+type SerialQueueEntry = 
+ record {
+   calledAt: opt int;
+   createdAt: int;
+   date: text;
+   doctorEmail: text;
+   id: text;
+   patientName: text;
+   phone: opt text;
+   registerNumber: opt text;
+   serialNumber: nat;
+   status: QueueStatus;
+   updatedAt: int;
+ };
+type RoleChangeEntry = 
+ record {
+   changedBy: principal;
+   id: nat;
+   newRole: StaffRole;
+   previousRole: opt StaffRole;
+   "principal": principal;
+   timestamp: int;
+ };
+type QueueStatus = 
+ variant {
+   done;
+   serving;
+   skipped;
+   waiting;
+ };
+type Prescription__1 = 
+ record {
+   advice: vec text;
+   authorId: principal;
+   authorName: text;
+   authorRole: StaffRole;
+   createdAt: int;
+   diagnoses: vec text;
+   encounterId: opt nat;
+   followUpCreatesAppointment: bool;
+   followUpDate: opt int;
+   id: nat;
+   isDeleted: bool;
+   isDraft: bool;
+   isFinalized: bool;
+   medications: vec Medication__1;
+   patientId: nat;
+   updatedAt: int;
+   versionInfo: VersionedRecord;
+ };
+type Prescription = 
+ record {
+   createdAt: Time;
+   diagnosis: opt text;
+   id: nat;
+   medications: vec Medication;
+   notes: opt text;
+   patientId: nat;
+   prescriptionDate: Time;
+   updatedAt: Time;
+   visitId: opt nat;
+ };
+type PatientType = 
+ variant {
+   admitted;
+   outdoor;
+ };
+type Patient = 
+ record {
+   address: opt text;
+   allergies: vec text;
+   bloodGroup: opt text;
+   chronicConditions: vec text;
+   consultantEmail: opt text;
+   consultantName: opt text;
+   createdAt: Time;
+   dateOfBirth: opt Time;
+   email: opt text;
+   fullName: text;
+   gender: Gender;
+   height: opt float64;
+   id: nat;
+   nameBn: opt text;
+   pastSurgicalHistory: opt text;
+   patientType: PatientType;
+   phone: opt text;
+   updatedAt: Time;
+   weight: opt float64;
+ };
+type OrderType = 
+ variant {
+   Investigation;
+   LabTest;
+   Medication;
+   Procedure;
+ };
+type OrderStatus = 
+ variant {
+   Cancelled;
+   Completed;
+   InProgress;
+   Pending;
+   Requested;
+ };
+type ObservationType = 
+ variant {
+   DrainMonitoring;
+   ExamFinding;
+   IntakeOutput;
+   Lab;
+   Vital;
+ };
+type ObservationStatus = 
+ variant {
+   Corrected;
+   Final;
+   Preliminary;
+ };
+type Observation = 
+ record {
+   code: text;
+   encounterId: opt nat;
+   enteredBy: opt principal;
+   enteredByRole: opt StaffRole;
+   id: nat;
+   interpretation: opt text;
+   isDeleted: bool;
+   normalRange: opt text;
+   numericValue: opt float64;
+   observationDate: int;
+   observationType: ObservationType;
+   patientId: nat;
+   recordedBy: principal;
+   recordedByName: text;
+   recordedByRole: StaffRole;
+   rejectionReason: opt text;
+   status: ObservationStatus;
+   unit: text;
+   value: text;
+   verifiedAt: opt int;
+   verifiedBy: opt principal;
+   versionInfo: VersionedRecord;
+   vitalVerificationStatus: opt VitalVerificationStatus;
+ };
+type NoteType = 
+ variant {
+   DailyProgress;
+   Discharge;
+   General;
+   Handover;
+   Nursing;
+   SOAP;
+ };
+type Medication__1 = 
+ record {
+   dose: text;
+   duration: text;
+   frequency: text;
+   instructions: opt text;
+   isPRN: bool;
+   name: text;
+   prnCondition: opt text;
+   route: text;
+ };
+type MedicationAdministrationStatus = 
+ variant {
+   Delayed;
+   Given;
+   NotGiven;
+ };
+type MedicationAdministration = 
+ record {
+   administeredAt: opt int;
+   createdAt: int;
+   dose: text;
+   id: nat;
+   medicationName: text;
+   missedReason: opt text;
+   patientId: nat;
+   recordedBy: text;
+   recordedByRole: text;
+   scheduledTime: int;
+   status: MedicationAdministrationStatus;
+   updatedAt: int;
+ };
+type Medication = 
+ record {
+   dose: text;
+   duration: text;
+   frequency: text;
+   instructions: text;
+   name: text;
+ };
+type HandoverStatus = 
+ variant {
+   draft;
+   submitted;
+ };
+type HandoverShift = 
+ variant {
+   evening;
+   morning;
+   night;
+ };
+type HandoverEntry = 
+ record {
+   actionableItems: vec text;
+   bedNumber: opt text;
+   clinicalSummary: text;
+   consultantComment: opt text;
+   consultantCommentAt: opt int;
+   consultantCommentBy: opt principal;
+   createdAt: int;
+   currentConsultant: opt text;
+   dayOfStay: opt nat;
+   diagnosis: opt text;
+   givenByName: text;
+   givenByPrincipal: principal;
+   givenByRole: StaffRole;
+   id: nat;
+   missedMedications: vec text;
+   patientId: nat;
+   patientName: text;
+   pendingInvestigations: vec text;
+   pendingProcedures: vec text;
+   registerNumber: opt text;
+   shift: HandoverShift;
+   shiftEndTime: int;
+   shiftStartTime: int;
+   status: HandoverStatus;
+   takenByName: opt text;
+   takenByPrincipal: opt principal;
+   takenByRole: opt StaffRole;
+   tasksPending: vec text;
+   updatedAt: int;
+   versionInfo: VersionedRecord;
+   vitalsSummary: opt text;
+   ward: opt text;
+ };
+type Gender = 
+ variant {
+   female;
+   male;
+   other;
+ };
+type EncounterType = 
+ variant {
+   Emergency;
+   FollowUp;
+   IPD;
+   OPD;
+ };
+type EncounterStatus = 
+ variant {
+   Cancelled;
+   Completed;
+   InProgress;
+   Planned;
+ };
+type Encounter = 
+ record {
+   encounterId: text;
+   encounterType: EncounterType;
+   endDate: opt int;
+   id: nat;
+   locationNotes: opt text;
+   patientId: nat;
+   previousVersions: vec VersionedRecord;
+   providerId: principal;
+   providerName: text;
+   startDate: int;
+   status: EncounterStatus;
+   versionInfo: VersionedRecord;
+ };
+type DiagnosisTemplate = 
+ record {
+   createdAt: int;
+   createdBy: principal;
+   defaultAdvice: vec text;
+   defaultAdviceBn: vec text;
+   defaultDrugs: vec text;
+   defaultInvestigations: vec text;
+   diagnosisName: text;
+   diagnosisNameBn: opt text;
+   icdCode: opt text;
+   id: nat;
+   isActive: bool;
+ };
+type DailyProgressType = 
+ variant {
+   emergency;
+   evening;
+   morning;
+ };
+type DailyProgressNoteUpdate = 
+ record {
+   activeComplaints: vec text;
+   activeDiagnoses: vec text;
+   assessmentText: text;
+   consultantComments: text;
+   consultantOverrides: text;
+   drainMonitoring: opt text;
+   intakeOutput: opt text;
+   internObjective: text;
+   internSubjective: text;
+   investigations: vec text;
+   moAssessment: text;
+   moPlan: text;
+   objectiveVitals: opt text;
+   planText: text;
+   subjectiveComplaints: vec text;
+   systemReview: opt text;
+ };
+type DailyProgressNote = 
+ record {
+   activeComplaints: vec text;
+   activeDiagnoses: vec text;
+   assessmentText: text;
+   authorId: principal;
+   authorName: text;
+   authorRole: StaffRole;
+   consultantComments: text;
+   consultantOverrides: text;
+   createdAt: int;
+   drainMonitoring: opt text;
+   encounterId: opt nat;
+   id: nat;
+   intakeOutput: opt text;
+   internObjective: text;
+   internSubjective: text;
+   investigations: vec text;
+   isDeleted: bool;
+   isDraft: bool;
+   moAssessment: text;
+   moPlan: text;
+   noteDate: text;
+   noteState: DailyNoteState;
+   objectiveVitals: opt text;
+   patientId: nat;
+   planText: text;
+   previousVersionIds: vec nat;
+   progressType: DailyProgressType;
+   rejectionReason: opt text;
+   reviewedByConsultant: opt text;
+   reviewedByMO: opt text;
+   subjectiveComplaints: vec text;
+   submitTimestamp: opt int;
+   submittedByRole: opt StaffRole;
+   systemReview: opt text;
+   updatedAt: int;
+   versionChain: vec text;
+   versionInfo: VersionedRecord;
+ };
+type DailyNoteState = 
+ variant {
+   draft;
+   finalized;
+   moReviewComplete;
+   rejected;
+   submittedToMO;
+ };
+type CurrentUser = 
+ record {
+   "principal": principal;
+   role: UserRole;
+ };
+type ClinicalOrder = 
+ record {
+   code: text;
+   completedAt: opt int;
+   description: text;
+   encounterId: opt nat;
+   id: nat;
+   notes: opt text;
+   orderType: OrderType;
+   orderedAt: int;
+   orderedBy: principal;
+   orderedByName: text;
+   orderedByRole: StaffRole;
+   patientId: nat;
+   result: opt text;
+   status: OrderStatus;
+   versionInfo: VersionedRecord;
+ };
+type ClinicalNote = 
+ record {
+   authorId: principal;
+   authorName: text;
+   authorRole: StaffRole;
+   content: text;
+   createdAt: int;
+   encounterId: opt nat;
+   id: nat;
+   isDeleted: bool;
+   isDraft: bool;
+   noteSubtype: opt text;
+   noteType: NoteType;
+   patientId: nat;
+   previousVersionIds: vec nat;
+   versionInfo: VersionedRecord;
+ };
+type ClinicalAlert = 
+ record {
+   acknowledgedAt: opt int;
+   acknowledgedBy: opt principal;
+   alertType: AlertType;
+   details: opt text;
+   id: nat;
+   isAcknowledged: bool;
+   isResolved: bool;
+   message: text;
+   patientId: nat;
+   resolvedAt: opt int;
+   severity: AlertSeverity;
+   triggeredAt: int;
+   triggeredBy: text;
+ };
+type BedTransferEntry = 
+ record {
+   date: int;
+   fromBed: text;
+   reason: text;
+   toBed: text;
+ };
+type BedStatus = 
+ variant {
+   Empty;
+   Maintenance;
+   Occupied;
+ };
+type BedRecord = 
+ record {
+   admissionDate: opt int;
+   bedNumber: text;
+   dischargeDate: opt int;
+   id: nat;
+   patientId: opt nat;
+   patientName: opt text;
+   status: BedStatus;
+   transferHistory: vec BedTransferEntry;
+   updatedAt: int;
+   ward: text;
+ };
+type AuditEntry = 
+ record {
+   afterValue: text;
+   beforeValue: opt text;
+   changedAt: int;
+   changedBy: principal;
+   changedByName: text;
+   changedByRole: StaffRole;
+   entityId: nat;
+   entityType: text;
+   fieldName: text;
+   id: nat;
+   ipAddress: opt text;
+   reason: opt text;
+ };
+type AppointmentType = 
+ variant {
+   chamber;
+   hospital;
+ };
+type AppointmentStatus = 
+ variant {
+   cancelled;
+   completed;
+   confirmed;
+   pending;
+ };
+type Appointment = 
+ record {
+   appointmentType: AppointmentType;
+   chamberName: opt text;
+   createdAt: int;
+   date: text;
+   doctorEmail: text;
+   hospitalName: opt text;
+   id: text;
+   notes: opt text;
+   patientId: opt nat;
+   patientName: text;
+   phone: opt text;
+   registerNumber: opt text;
+   serialNumber: opt nat;
+   status: AppointmentStatus;
+   timeSlot: opt text;
+   updatedAt: int;
+ };
+type AlertType = 
+ variant {
+   AKI;
+   AllergyContraindication;
+   CriticalLab;
+   DrugInteraction;
+   Hypotension;
+   Hypoxia;
+   MissedDoseEscalation;
+   Sepsis;
+ };
+type AlertSeverity = 
+ variant {
+   Critical;
+   Info;
+   Warning;
+ };
+type AdmissionStatus = 
+ variant {
+   admitted;
+   discharged;
+   transferred;
+ };
+type AdmissionRecord = 
+ record {
+   admittedAt: int;
+   admittedBy: principal;
+   admittedByRole: StaffRole;
+   bed: text;
+   consultantEmail: text;
+   department: text;
+   dischargedAt: opt int;
+   id: nat;
+   patientId: nat;
+   status: AdmissionStatus;
+   updatedAt: int;
+   ward: text;
+ };
+service : {
+  _initializeAccessControlWithSecret: (userSecret: text) -> ();
+  acknowledgeAlert: (id: nat) -> (variant {
+                                    err: text;
+                                    ok: ClinicalAlert;
+                                  });
+  acknowledgeHandover: (id: nat) -> (variant {
+                                       err: text;
+                                       ok: HandoverEntry;
+                                     });
+  acknowledgeObservationCorrection: (id: nat, newValue: text, reason:
+   text) -> (variant {
+               err: text;
+               ok: Observation;
+             });
+  addAuditEntry: (entityType: text, entityId: nat, fieldName: text,
+   beforeValue: opt text, afterValue: text, reason: opt text) -> ();
+  addNoteAddendum: (patientId: nat, noteId: nat, addendumText: text) ->
+   (variant {
+      err: text;
+      ok: DailyProgressNote;
+    });
+  approveDischarge: (admissionId: nat) ->
+   (variant {
+      err: text;
+      ok: AdmissionRecord;
+    });
+  assignBed: (bedId: nat, patientId: nat, patientName: text) ->
+   (variant {
+      err: text;
+      ok: BedRecord;
+    });
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  assignConsultant: (patientId: nat, consultantEmail: text, consultantName:
+   text) -> (Patient);
+  bulkUpsertAppointments: (appts: vec Appointment) ->
+   (variant {
+      err: text;
+      ok: nat;
+    });
+  bulkUpsertBeds: (beds: vec BedRecord) -> (vec BedRecord);
+  bulkUpsertDailyProgressNotes: (notes: vec DailyProgressNote) ->
+   (vec DailyProgressNote);
+  bulkUpsertHandovers: (handovers: vec HandoverEntry) -> (vec HandoverEntry);
+  bulkUpsertMedicationAdministrations: (records:
+   vec MedicationAdministration) -> (vec MedicationAdministration);
+  bulkUpsertObservations: (obs: vec Observation) -> (vec Observation);
+  bulkUpsertPatients: (pats: vec Patient) -> (vec Patient);
+  bulkUpsertPrescriptions: (prescs: vec Prescription) -> (vec Prescription);
+  bulkUpsertQueueEntries: (entries: vec SerialQueueEntry) ->
+   (variant {
+      err: text;
+      ok: nat;
+    });
+  bulkUpsertVisits: (vs: vec Visit) -> (vec Visit);
+  clearQueueByDate: (date: text, doctorEmail: text) ->
+   (variant {
+      err: text;
+      ok: nat;
+    });
+  createAdmission: (patientId: nat, consultantEmail: text, bed: text, ward:
+   text, department: text) -> (variant {
+                                 err: text;
+                                 ok: AdmissionRecord;
+                               });
+  createAppointment: (id: text, patientId: opt nat, patientName: text,
+   registerNumber: opt text, phone: opt text, appointmentType:
+   AppointmentType, chamberName: opt text, hospitalName: opt text, date:
+   text, timeSlot: opt text, status: AppointmentStatus, doctorEmail: 
+   text, serialNumber: opt nat, notes: opt text) ->
+   (variant {
+      err: text;
+      ok: Appointment;
+    });
+  createBedRecord: (bedNumber: text, ward: text) ->
+   (variant {
+      err: text;
+      ok: BedRecord;
+    });
+  createClinicalAlert: (patientId: nat, alertType: AlertType, severity:
+   AlertSeverity, message: text, details: opt text) ->
+   (variant {
+      err: text;
+      ok: ClinicalAlert;
+    });
+  createClinicalNote: (patientId: nat, encounterId: opt nat, noteType:
+   NoteType, noteSubtype: opt text, content: text, isDraft: bool) ->
+   (variant {
+      err: text;
+      ok: ClinicalNote;
+    });
+  createClinicalPrescription: (patientId: nat, encounterId: opt nat,
+   medications: vec Medication__1, diagnoses: vec text, advice: vec text,
+   followUpDate: opt int, followUpCreatesAppointment: bool, isDraft: 
+   bool) -> (variant {
+               err: text;
+               ok: Prescription__1;
+             });
+  createDailyProgressNote: (patientId: nat, encounterId: opt nat,
+   progressType: DailyProgressType, noteDate: text, subjectiveComplaints:
+   vec text, systemReview: opt text, objectiveVitals: opt text, intakeOutput:
+   opt text, drainMonitoring: opt text, investigations: vec text,
+   assessmentText: text, planText: text, activeComplaints: vec text,
+   activeDiagnoses: vec text, isDraft: bool) ->
+   (variant {
+      err: text;
+      ok: DailyProgressNote;
+    });
+  createDiagnosisTemplate: (diagnosisName: text, diagnosisNameBn: opt text,
+   icdCode: opt text, defaultDrugs: vec text, defaultInvestigations:
+   vec text, defaultAdvice: vec text, defaultAdviceBn: vec text) ->
+   (variant {
+      err: text;
+      ok: DiagnosisTemplate;
+    });
+  createEncounter: (patientId: nat, encounterType: EncounterType,
+   locationNotes: opt text) -> (variant {
+                                  err: text;
+                                  ok: Encounter;
+                                });
+  createFollowUpAppointment: (prescriptionId: nat, followUpDate: int,
+   patientId: nat, patientName: text, doctorEmail: text) ->
+   (variant {
+      err: text;
+      ok: Appointment;
+    });
+  createHandover: (patientId: nat, shift: HandoverShift, shiftStartTime: 
+   int, shiftEndTime: int, patientName: text, registerNumber: opt text, ward:
+   opt text, bedNumber: opt text, diagnosis: opt text, dayOfStay: opt nat,
+   currentConsultant: opt text, clinicalSummary: text, vitalsSummary:
+   opt text, actionableItems: vec text, tasksPending: vec text,
+   pendingInvestigations: vec text, pendingProcedures: vec text,
+   missedMedications: vec text) -> (variant {
+                                      err: text;
+                                      ok: HandoverEntry;
+                                    });
+  createObservation: (patientId: nat, encounterId: opt nat, observationType:
+   ObservationType, code: text, value: text, numericValue: opt float64, unit:
+   text, interpretation: opt text, normalRange: opt text, observationDate:
+   int) -> (variant {
+              err: text;
+              ok: Observation;
+            });
+  createOrder: (patientId: nat, encounterId: opt nat, orderType: OrderType,
+   code: text, description: text, notes: opt text) ->
+   (variant {
+      err: text;
+      ok: ClinicalOrder;
+    });
+  createPatient: (fullName: text, nameBn: opt text, dateOfBirth: opt Time,
+   gender: Gender, phone: opt text, email: opt text, address: opt text,
+   bloodGroup: opt text, weight: opt float64, height: opt float64, allergies:
+   vec text, chronicConditions: vec text, pastSurgicalHistory: opt text,
+   patientType: PatientType, consultantEmail: opt text, consultantName:
+   opt text) -> (Patient);
+  createPrescription: (patientId: nat, visitId: opt nat, prescriptionDate:
+   Time, diagnosis: opt text, medications: vec Medication, notes:
+   opt text) -> (Prescription);
+  createQueueEntry: (id: text, date: text, serialNumber: nat, patientName:
+   text, registerNumber: opt text, phone: opt text, status: QueueStatus,
+   calledAt: opt int, doctorEmail: text) ->
+   (variant {
+      err: text;
+      ok: SerialQueueEntry;
+    });
+  createVisit: (patientId: nat, visitDate: Time, chiefComplaint: text,
+   historyOfPresentIllness: opt text, vitalSigns: VitalSigns,
+   physicalExamination: opt text, diagnosis: opt text, notes: opt text,
+   visitType: VisitType) -> (Visit);
+  deleteAppointment: (id: text) -> (variant {
+                                      err: text;
+                                      ok;
+                                    });
+  deletePatient: (id: nat) -> ();
+  deletePrescription: (id: nat) -> ();
+  deleteQueueEntry: (id: text) -> (variant {
+                                     err: text;
+                                     ok;
+                                   });
+  deleteVisit: (id: nat) -> ();
+  dischargeBed: (bedId: nat) -> (variant {
+                                   err: text;
+                                   ok: BedRecord;
+                                 });
+  dismissAlert: (id: nat) -> (variant {
+                                err: text;
+                                ok: ClinicalAlert;
+                              });
+  finalizeClinicalPrescription: (id: nat) ->
+   (variant {
+      err: text;
+      ok: Prescription__1;
+    });
+  finalizeDailyNote: (patientId: nat, noteId: nat, consultantEmail: text,
+   consultantComments: text, finalSOAP: DailyProgressNoteUpdate) ->
+   (variant {
+      err: text;
+      ok: DailyProgressNote;
+    });
+  finalizeNote: (id: nat) -> (variant {
+                                err: text;
+                                ok: ClinicalNote;
+                              });
+  getActiveAlerts: (patientId: nat) -> (vec ClinicalAlert) query;
+  getActiveOrdersByPatient: (patientId: nat) -> (vec ClinicalOrder) query;
+  getAlertsByPatient: (patientId: nat) -> (vec ClinicalAlert) query;
+  getAllAdmittedPatients: (consultantEmail: opt text, ward: opt text, bed:
+   opt text, department: opt text, admissionStatus: opt text) ->
+   (variant {
+      err: text;
+      ok: vec AdmissionRecord;
+    }) query;
+  getAllAppointmentsByDoctor: (doctorEmail: text) ->
+   (variant {
+      err: text;
+      ok: vec Appointment;
+    }) query;
+  getAllAuditEntries: (limit: nat, offset: nat) -> (vec AuditEntry) query;
+  getAllBeds: () -> (vec BedRecord) query;
+  getAllBedsSince: (sinceTimestamp: int) -> (vec BedRecord) query;
+  getAllDiagnosisTemplates: () -> (vec DiagnosisTemplate) query;
+  getAllEncounters: () -> (vec Encounter) query;
+  getAllHandoversSince: (sinceTimestamp: int) -> (vec HandoverEntry) query;
+  getAllMedicationAdministrationsSince: (sinceTimestamp: int) ->
+   (vec MedicationAdministration) query;
+  getAllObservationsSince: (sinceTimestamp: int) -> (vec Observation) query;
+  getAllPatients: () -> (vec Patient) query;
+  getAllPatientsSince: (sinceTimestamp: int) -> (vec Patient) query;
+  getAllPrescriptions: () -> (vec Prescription) query;
+  getAllPrescriptionsSince: (sinceTimestamp: int) -> (vec Prescription) query;
+  getAllRoleChanges: () ->
+   (variant {
+      err: text;
+      ok: vec RoleChangeEntry;
+    }) query;
+  getAllVisits: () -> (vec Visit) query;
+  getAllVisitsSince: (sinceTimestamp: int) -> (vec Visit) query;
+  getAppointmentById: (id: text) ->
+   (variant {
+      err: text;
+      ok: opt Appointment;
+    }) query;
+  getAppointmentsByDoctor: (doctorEmail: text, date: text) ->
+   (variant {
+      err: text;
+      ok: vec Appointment;
+    }) query;
+  getAppointmentsSince: (doctorEmail: text, sinceTimestamp: int) ->
+   (variant {
+      err: text;
+      ok: vec Appointment;
+    }) query;
+  getAuditLog: (patientId: nat, limit: nat, offset: nat) ->
+   (vec AuditEntry) query;
+  getAuditTrail: (patientId: nat, limit: nat, offset: nat) ->
+   (vec AuditEntry) query;
+  getAvailableBeds: () -> (vec BedRecord) query;
+  getCallerUserProfile: () -> (opt UserProfile) query;
+  getCallerUserRole: () -> (UserRole) query;
+  getClinicalNotesByPatient: (patientId: nat) -> (vec ClinicalNote) query;
+  getClinicalNotesByType: (patientId: nat, noteType: NoteType) ->
+   (vec ClinicalNote) query;
+  getClinicalPrescriptionsAwaitingApproval: () -> (vec Prescription__1) query;
+  getClinicalPrescriptionsByPatient: (patientId: nat) ->
+   (vec Prescription__1) query;
+  getCurrentUser: () -> (CurrentUser);
+  getDailyNotesByPatient: (patientId: nat, dateFilter: opt text) ->
+   (vec DailyProgressNote) query;
+  getDailyProgressNotesByPatientId: (patientId: nat) ->
+   (vec DailyProgressNote) query;
+  getDailyProgressNotesSince: (sinceTimestamp: int) ->
+   (vec DailyProgressNote) query;
+  getDiagnosisTemplate: (id: nat) -> (opt DiagnosisTemplate) query;
+  getEmailIndex: () ->
+   (variant {
+      err: text;
+      ok: vec record {
+                text;
+                principal;
+              };
+    }) query;
+  getEncountersByPatient: (patientId: nat) -> (vec Encounter) query;
+  getFrontPageContent: () -> (opt text) query;
+  getFullSyncData: (doctorEmail: text) ->
+   (variant {
+      err: text;
+      ok: SyncData;
+    }) query;
+  getHandover: (id: nat) -> (opt HandoverEntry) query;
+  getHandoversByPatientId: (patientId: nat) -> (vec HandoverEntry) query;
+  getLastSyncTime: (deviceId: text) -> (opt int) query;
+  getLastSyncTimestamp: () -> (int) query;
+  getMedicationAdministrationsByPatient: (patientId: nat) ->
+   (vec MedicationAdministration) query;
+  getNotesAwaitingApproval: () -> (vec ClinicalNote) query;
+  getObservationsByPatient: (patientId: nat) -> (vec Observation) query;
+  getObservationsByType: (patientId: nat, observationType:
+   ObservationType) -> (vec Observation) query;
+  getOccupiedBeds: () -> (vec BedRecord) query;
+  getOrdersByPatient: (patientId: nat) -> (vec ClinicalOrder) query;
+  getPatient: (id: nat) -> (opt Patient) query;
+  getPrescription: (id: nat) -> (opt Prescription) query;
+  getPrescriptionsByPatientId: (patientId: nat) -> (vec Prescription) query;
+  getPrescriptionsByVisitId: (visitId: nat) -> (vec Prescription) query;
+  getQueueByDateAndDoctor: (date: text, doctorEmail: text) ->
+   (variant {
+      err: text;
+      ok: vec SerialQueueEntry;
+    }) query;
+  getQueueEntriesSince: (doctorEmail: text, sinceTimestamp: int) ->
+   (variant {
+      err: text;
+      ok: vec SerialQueueEntry;
+    }) query;
+  getRoleChangeHistory: ("principal": principal) ->
+   (vec RoleChangeEntry) query;
+  getServerTimestamp: () -> (int) query;
+  getUnacknowledgedAlerts: () -> (vec ClinicalAlert) query;
+  getUpdatedData: (doctorEmail: text, sinceTimestamp: int) ->
+   (variant {
+      err: text;
+      ok: UpdatedData;
+    }) query;
+  getUserProfile: (user: principal) -> (opt UserProfile) query;
+  getVisit: (id: nat) -> (opt Visit) query;
+  getVisitsByPatientId: (patientId: nat) -> (vec Visit) query;
+  getVitalsForVerification: () -> (vec Observation) query;
+  getWardRoundStatus: (date: text) -> (vec WardRoundPatientStatus) query;
+  isCallerAdmin: () -> (bool) query;
+  isEmailRegistered: (email: text) -> (bool) query;
+  migrateFromLocalStorage: (patientsJson: text, visitsJson: text,
+   prescriptionsJson: text, appointmentsJson: text) ->
+   (variant {
+      err: text;
+      ok: text;
+    });
+  recordAISuggestionAccepted: (patientId: nat, suggestionType: text,
+   suggestionText: text, confidence: float64) -> ();
+  recordDeviceSync: (deviceId: text, pendingChanges: nat) ->
+   (variant {
+      err: text;
+      ok: SyncRecord;
+    });
+  recordMedicationAdministration: (patientId: nat, medicationName: text,
+   dose: text, scheduledTime: int, administeredAt: opt int, status:
+   MedicationAdministrationStatus, missedReason: opt text) ->
+   (variant {
+      err: text;
+      ok: MedicationAdministration;
+    });
+  registerEmail: (email: text) -> (variant {
+                                     err: text;
+                                     ok;
+                                   });
+  rejectDraftNote: (patientId: nat, noteId: nat, reviewerEmail: text,
+   rejectionReason: text) -> (variant {
+                                err: text;
+                                ok: DailyProgressNote;
+                              });
+  rejectVital: (observationId: nat, reason: text) ->
+   (variant {
+      err: text;
+      ok: Observation;
+    });
+  resolveAlert: (id: nat) -> (variant {
+                                err: text;
+                                ok: ClinicalAlert;
+                              });
+  saveCallerUserProfile: (profile: UserProfile) -> ();
+  saveFrontPageContent: (content: text) -> ();
+  submitDailyNoteForReview: (patientId: nat, noteId: nat, noteContent:
+   DailyProgressNoteUpdate) -> (variant {
+                                  err: text;
+                                  ok: DailyProgressNote;
+                                });
+  syncData: (doctorEmail: text) -> (variant {
+                                      err: text;
+                                      ok: SyncData;
+                                    }) query;
+  transferBed: (bedId: nat, newBedId: nat, reason: text) ->
+   (variant {
+      err: text;
+      ok: BedRecord;
+    });
+  updateAdmissionStatus: (admissionId: nat, newStatus: AdmissionStatus) ->
+   (variant {
+      err: text;
+      ok: AdmissionRecord;
+    });
+  updateAppointment: (id: text, patientId: opt nat, patientName: text,
+   registerNumber: opt text, phone: opt text, appointmentType:
+   AppointmentType, chamberName: opt text, hospitalName: opt text, date:
+   text, timeSlot: opt text, status: AppointmentStatus, serialNumber:
+   opt nat, notes: opt text) -> (variant {
+                                   err: text;
+                                   ok: Appointment;
+                                 });
+  updateClinicalNote: (id: nat, content: text, isDraft: bool, changeReason:
+   opt text) -> (variant {
+                   err: text;
+                   ok: ClinicalNote;
+                 });
+  updateDailyProgressNote: (id: nat, subjectiveComplaints: vec text,
+   systemReview: opt text, objectiveVitals: opt text, intakeOutput: opt text,
+   drainMonitoring: opt text, investigations: vec text, assessmentText: 
+   text, planText: text, activeComplaints: vec text, activeDiagnoses:
+   vec text, isDraft: bool, changeReason: opt text) ->
+   (variant {
+      err: text;
+      ok: DailyProgressNote;
+    });
+  updateDiagnosisTemplate: (id: nat, diagnosisName: text, diagnosisNameBn:
+   opt text, icdCode: opt text, defaultDrugs: vec text,
+   defaultInvestigations: vec text, defaultAdvice: vec text, defaultAdviceBn:
+   vec text) -> (variant {
+                   err: text;
+                   ok: DiagnosisTemplate;
+                 });
+  updateEncounter: (id: nat, patientId: nat, status: EncounterStatus,
+   endDate: opt int, locationNotes: opt text) ->
+   (variant {
+      err: text;
+      ok: Encounter;
+    });
+  updateHandover: (id: nat, clinicalSummary: text, vitalsSummary: opt text,
+   actionableItems: vec text, tasksPending: vec text, pendingInvestigations:
+   vec text, pendingProcedures: vec text, missedMedications: vec text,
+   takenByName: opt text, takenByRole: opt StaffRole, takenByPrincipal:
+   opt principal, consultantComment: opt text, status: HandoverStatus) ->
+   (variant {
+      err: text;
+      ok: HandoverEntry;
+    });
+  updateOrderStatus: (id: nat, status: OrderStatus, result: opt text,
+   completedAt: opt int) -> (variant {
+                               err: text;
+                               ok: ClinicalOrder;
+                             });
+  updatePatient: (id: nat, fullName: text, nameBn: opt text, dateOfBirth:
+   opt Time, gender: Gender, phone: opt text, email: opt text, address:
+   opt text, bloodGroup: opt text, weight: opt float64, height: opt float64,
+   allergies: vec text, chronicConditions: vec text, pastSurgicalHistory:
+   opt text, patientType: PatientType, consultantEmail: opt text,
+   consultantName: opt text) -> (Patient);
+  updatePatientBedAssignment: (admissionId: nat, newBed: text) ->
+   (variant {
+      err: text;
+      ok: AdmissionRecord;
+    });
+  updatePrescription: (id: nat, patientId: nat, visitId: opt nat,
+   prescriptionDate: Time, diagnosis: opt text, medications: vec Medication,
+   notes: opt text) -> (Prescription);
+  updateQueueEntry: (id: text, status: QueueStatus, calledAt: opt int) ->
+   (variant {
+      err: text;
+      ok: SerialQueueEntry;
+    });
+  updateVisit: (id: nat, patientId: nat, visitDate: Time, chiefComplaint:
+   text, historyOfPresentIllness: opt text, vitalSigns: VitalSigns,
+   physicalExamination: opt text, diagnosis: opt text, notes: opt text,
+   visitType: VisitType) -> (Visit);
+  upsertPatient: (patient: Patient) -> (Patient);
+  upsertPrescription: (prescription: Prescription) -> (Prescription);
+  upsertVisit: (visit: Visit) -> (Visit);
+  verifyVital: (observationId: nat) -> (variant {
+                                          err: text;
+                                          ok: Observation;
+                                        });
+}
