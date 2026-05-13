@@ -1024,9 +1024,14 @@ function saveClinicalEntities<T extends { id: unknown; updatedAt?: unknown }>(
   saveClinicalEntitiesWithSync(entityType, items, _canisterActor);
 }
 
-function nextClinicalId<T extends { id: bigint }>(items: T[]): bigint {
+function nextClinicalId<T extends { id: unknown }>(items: T[]): bigint {
   if (items.length === 0) return 1n;
-  return items.reduce((max, item) => (item.id > max ? item.id : max), 0n) + 1n;
+  return (
+    items.reduce((max, item) => {
+      const v = BigInt(String(item.id ?? 0));
+      return v > max ? v : max;
+    }, 0n) + 1n
+  );
 }
 
 // ── Encounters ────────────────────────────────────────────────────────────────
@@ -1352,8 +1357,32 @@ export function useGetAllBeds() {
   return useQuery<BedRecord[]>({
     queryKey: ["beds"],
     queryFn: async () => {
-      return getClinicalEntities<BedRecord>("beds");
+      const raw = getClinicalEntities<BedRecord>("beds");
+      // Normalise id and BigInt timestamp fields that may have been stored as
+      // plain numbers by JSON.parse (no BigInt reviver in getClinicalStore).
+      return raw.map((b) => ({
+        ...b,
+        id: BigInt(String(b.id ?? 0)),
+        patientId:
+          b.patientId !== undefined ? BigInt(String(b.patientId)) : undefined,
+        admissionDate:
+          b.admissionDate !== undefined
+            ? BigInt(String(b.admissionDate))
+            : undefined,
+        dischargeDate:
+          b.dischargeDate !== undefined
+            ? BigInt(String(b.dischargeDate))
+            : undefined,
+        transferHistory: (b.transferHistory ?? []).map((t) => ({
+          ...t,
+          date:
+            t.date !== undefined
+              ? BigInt(String(t.date))
+              : (undefined as never),
+        })),
+      }));
     },
+    refetchInterval: 15_000,
   });
 }
 
@@ -1365,6 +1394,7 @@ export function useCreateBedRecord() {
       ward: string;
       hospitalName?: string;
       floor?: string;
+      bedType?: string;
     }) => {
       const all = getClinicalEntities<BedRecord>("beds");
       const newBed: BedRecord = {
@@ -1373,6 +1403,7 @@ export function useCreateBedRecord() {
         ward: data.ward,
         hospitalName: data.hospitalName ?? "",
         floor: data.floor,
+        bedType: (data.bedType as BedRecord["bedType"]) ?? "General",
         status: "Empty",
         transferHistory: [],
       };
@@ -1392,17 +1423,20 @@ export function useAssignBed() {
       patientName: string;
     }) => {
       const all = getClinicalEntities<BedRecord>("beds");
-      const updated = all.map((b) =>
-        b.id === data.bedId
+      // Normalise stored ids to BigInt before comparing to avoid mixed-type errors
+      const updated = all.map((b) => {
+        const bId = BigInt(String(b.id ?? 0));
+        return bId === data.bedId
           ? {
               ...b,
+              id: bId,
               status: "Occupied" as BedRecord["status"],
               patientId: data.patientId,
               patientName: data.patientName,
               admissionDate: BigInt(Date.now()) * 1_000_000n,
             }
-          : b,
-      );
+          : { ...b, id: bId };
+      });
       saveClinicalEntities("beds", updated);
       return updated.find((b) => b.id === data.bedId) as BedRecord;
     },

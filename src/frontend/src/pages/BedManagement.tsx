@@ -30,12 +30,14 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
+  getCanisterActor,
   loadFromAllDoctorKeys,
   useAssignBed,
   useCreateBedRecord,
   useGetAllBeds,
 } from "../hooks/useQueries";
 import { getClinicalStore, saveClinicalStore } from "../lib/clinicalStore";
+import { saveClinicalEntitiesWithSync } from "../lib/hybridStorage";
 import type { BedRecord, BedType, Patient } from "../types";
 
 // ── Bed Type config ──────────────────────────────────────────────────────────
@@ -836,12 +838,15 @@ export default function BedManagement() {
   function handleReservationExpired(bed: BedRecord) {
     const store = getClinicalStore();
     const all = (store.beds as BedRecord[] | undefined) ?? [];
-    const target = all.find((b) => b.id === bed.id);
+    // Normalise ids to BigInt before comparing to avoid mixed-type errors
+    const bedId = BigInt(String(bed.id ?? 0));
+    const target = all.find((b) => BigInt(String(b.id ?? 0)) === bedId);
     if (!target || target.status !== "Reserved") return;
     store.beds = all.map((b) =>
-      b.id === bed.id
+      BigInt(String(b.id ?? 0)) === bedId
         ? {
             ...b,
+            id: bedId,
             status: "Empty" as BedStatus,
             reservationExpiry: null,
             reservedForPatient: null,
@@ -849,6 +854,9 @@ export default function BedManagement() {
         : b,
     ) as unknown[];
     saveClinicalStore(store);
+    // Sync expired reservation release to canister
+    const updatedBeds = (store.beds as BedRecord[]) ?? [];
+    saveClinicalEntitiesWithSync("beds", updatedBeds, getCanisterActor());
     refetch();
     toast.warning(
       `Bed ${bed.bedNumber} reservation expired and released — ${bed.reservedForPatient ?? "patient"} did not arrive`,
@@ -957,8 +965,16 @@ export default function BedManagement() {
   function updateBedInStore(updater: (b: BedRecord) => BedRecord) {
     const store = getClinicalStore();
     const all = (store.beds as BedRecord[] | undefined) ?? [];
-    store.beds = all.map(updater) as unknown[];
+    // Normalise ids to BigInt before passing to updater to prevent mixed-type errors
+    const normalised = all.map((b) => ({
+      ...b,
+      id: BigInt(String(b.id ?? 0)),
+    }));
+    store.beds = normalised.map(updater) as unknown[];
     saveClinicalStore(store);
+    // Sync beds to canister
+    const updatedBeds = (store.beds as BedRecord[]) ?? [];
+    saveClinicalEntitiesWithSync("beds", updatedBeds, getCanisterActor());
     refetch();
   }
 
@@ -1057,14 +1073,20 @@ export default function BedManagement() {
   ) {
     const store = getClinicalStore();
     const all = (store.beds as BedRecord[] | undefined) ?? [];
-    const toBed = all.find((b) => b.id === toBedId);
+    // Normalise ids to BigInt before comparing to avoid mixed-type errors
+    const normalised = all.map((b) => ({
+      ...b,
+      id: BigInt(String(b.id ?? 0)),
+    }));
+    const toBed = normalised.find((b) => b.id === toBedId);
     if (!toBed || toBed.status !== "Empty") {
       toast.error("Target bed is not available");
       return;
     }
+    const fromBedId = BigInt(String(fromBed.id ?? 0));
     const now = BigInt(Date.now()) * 1_000_000n;
-    store.beds = all.map((b) => {
-      if (b.id === fromBed.id)
+    store.beds = normalised.map((b) => {
+      if (b.id === fromBedId)
         return {
           ...b,
           status: "Cleaning" as BedStatus,
@@ -1092,6 +1114,9 @@ export default function BedManagement() {
       return b;
     }) as unknown[];
     saveClinicalStore(store);
+    // Sync transfer changes to canister
+    const updatedBeds = (store.beds as BedRecord[]) ?? [];
+    saveClinicalEntitiesWithSync("beds", updatedBeds, getCanisterActor());
     refetch();
     setShowTransferDialog(false);
     setTransferBedId("");
@@ -1927,22 +1952,10 @@ export default function BedManagement() {
                       ward: newWard,
                       hospitalName: newHospitalName.trim(),
                       floor: newFloor.trim() || undefined,
+                      bedType: newBedType,
                     },
                     {
                       onSuccess: () => {
-                        // Patch bedType after create since the hook doesn't accept it yet
-                        const store = getClinicalStore();
-                        const all =
-                          (store.beds as BedRecord[] | undefined) ?? [];
-                        const lastId = all.reduce(
-                          (max, b) => (b.id > max ? b.id : max),
-                          0n,
-                        );
-                        store.beds = all.map((b) =>
-                          b.id === lastId ? { ...b, bedType: newBedType } : b,
-                        ) as unknown[];
-                        saveClinicalStore(store);
-                        refetch();
                         toast.success("Bed added");
                         setShowAddBedDialog(false);
                         setNewBedNumber("");

@@ -5,12 +5,3 @@ dist/
 .platform/
 .pnpm-store/
 .cache/
-
-# Environment files
-.env
-.env.local
-.env.development.local
-.env.production.local
-
-# Specific frontend env file
-src/frontend/.env.local

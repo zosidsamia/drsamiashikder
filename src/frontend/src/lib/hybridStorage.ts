@@ -1480,15 +1480,31 @@ async function _doFlush(
     return q;
   });
   saveSyncQueue(updatedRemaining);
+  const pending = loadSyncQueue().length;
+
   if (totalSuccess > 0) {
     localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
-    // Fire a custom event so the SyncStatusBadge updates immediately
+    // Notify SyncStatusBadge of successful flush
     window.dispatchEvent(
-      new CustomEvent("syncComplete", { detail: { flushed: totalSuccess } }),
+      new CustomEvent("syncComplete", {
+        detail: {
+          flushed: totalSuccess,
+          lastSyncTime: Date.now(),
+          pendingCount: pending,
+        },
+      }),
     );
   }
 
-  const pending = loadSyncQueue().length;
+  if (totalFailed > 0) {
+    // Notify SyncStatusBadge of failed items so it can show "N failed — retrying"
+    window.dispatchEvent(
+      new CustomEvent("syncFailed", {
+        detail: { failedCount: totalFailed, pendingCount: pending },
+      }),
+    );
+  }
+
   return { success: totalSuccess, failed: totalFailed, pending };
 }
 

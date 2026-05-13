@@ -1,0 +1,823 @@
+Item Name,Rate
+1 Hours After 100gm Glucose,200
+1 Hours After 50gm Glucose,200
+1 Hours After 75gm Glucose,200
+2 Hours After 100gm Glucose,200
+2 Hours After 50gm Glucose,200
+2 Hours After 75gm Glucose,200
+2 Hours After Breakfast,250
+2 Hours After Dinner,200
+2 Hours After Lunch,200
+2 Hours After Meal,200
+Acid Phosphatase Non-Prostatic Serum,800
+Acid Phosphatase Prostatic Serum,1000
+Acid Phosphatase Serum,950
+Albumin Creatinine Ratio (ACR)-Urine,1000
+Aldolase Serum,1100
+Alkaline Phosphatese/ALP,400
+Allergy Panel,8400
+Amphetamines Urine,1200
+B2 Microglobulin,2000
+Benzodiazepines Urine,1200
+Bicarbonate Serum,550
+Blood Ammonia,1100
+CK-MB Serum,1100
+CPK Serum,1000
+CUS 1 Hours After 75gm Glucose,100
+CUS 1hours ABF,100
+CUS 1hours After 100gm Glucose,100
+CUS 1hours After 50gm Glucose,100
+CUS 1hours After Lunch,100
+CUS 2 Hours ABF,100
+CUS 2 Hours After 75gm Glucose,100
+CUS 2 Hours After Dinner,100
+CUS 2 Hours After Lunch,100
+CUS 2 hours After 100gm Glucose,100
+CUS 2hours After Meal,100
+CUS Before Dinner,100
+CUS Before Lunch,100
+CUS FBS,100
+CUS PPBS,100
+CUS RBS,100
+Cannabinoid Urine,1200
+Ceruloplasmin Serum,3500
+Chloride Serum,300
+Chloride Urine,300
+Cholesterol Total,350
+Cocaine Urine,1200
+Copper Serum,2000
+Creatinine Clearance Rate (CCR),700
+Creatinine Urine,500
+DHEA-SULPHATE (DHEA SO4),1200
+Digoxin Level,1200
+Dope Test,2800
+Dope Test (BRAC Bank),2000
+ETHYL ALCOHOL,1200
+Electrolyte 24 hours Urine,950
+Electrolytes Urine,1000
+FBS (Fasting Blood Sugar),250
+FDP (Fibrin Degradation Product),1250
+Fibrinogen Level,900
+Fluid for LDH,900
+Folic Acid (Folate),1500
+GFR,1000
+GGT (Gamma Glutamyl Transferase),1100
+Glucose-6 Phosphate Dehydrogenase (G6PD),1500
+HDL Cholesterol,400
+HOMA I/R Index,1500
+HbA1c,1100
+Insulin (Fasting),1200
+Insulin (Random),1200
+Iron Profile,3000
+LDL Cholesterol,400
+Lipid Profile (Fasting),1200
+Lipid Profile (Random),1200
+"Liver Function Test (LFT) (Bilirubin, SGOT, SGPT, ALP)",1000
+Micro Albumin - Urine,1000
+Micro Albumin Urine 24 hours,1000
+Myoglobin,1100
+OGTT (2 Sample),500
+OGTT (3 Sample),600
+Opiate Urine,1200
+Osmolality Blood,1000
+Osmolality Urine,1100
+PCR for Urine (Protein Creatinine Ratio),800
+Phosphate Urine 24 hours,600
+Phosphate(PO4),550
+Plasma Ammonia,1000
+Plasma Lactate,1100
+R B S (Glucometer),200
+RBS,250
+S. Adenosine Deaminase (ADA),1250
+S. Albumin,500
+S. Amylase,1200
+S. Bilirubin (Direct),350
+S. Bilirubin (Indirect),500
+S. Bilirubin (Total),400
+S. Calcium,500
+S. Globulin,350
+S. Inorganic Phosphate (PO4),600
+S. Iron,1200
+S. LDH,1100
+S. Lipase,1200
+S. Magnesium,1100
+S. TIBC,1100
+S.Erythropoietin,3200
+S.Urea/BUN,400
+SGOT/AST,400
+SGPT/ALT,400
+Serum Creatinine,400
+Serum Electrolyte,1000
+Serum Lithium,1200
+Serum Potassium,300
+Serum Protein Electrophoresis,1500
+Serum Sodium (Na+),300
+Serum Total Protein,500
+Serum Uric Acid,450
+Total Protein & Albumin Serum,900
+Total Protein Urine 24 hours,500
+Transferrin Saturation,2000
+Triglycerides,350
+Troponin-I (ICT),1100
+Urinary Sodium (Na+),300
+Urine Amylase,1000
+Urine Potassium (K),300
+Valproic Acid Blood,1200
+eGFR,1000
+Albumin (Urine),300
+Ascitic Fluid for AFB,400
+BAL for AFB,400
+BAL for Gram Stain,400
+Bence Jones Protein,600
+Bile Pigment,250
+Bile Salt,200
+Dermatophytes,200
+FLUID FOR ADA,1200
+Fluid For Creatinine,350
+Fluid for Biochemistry,800
+Fluid for Glucose,180
+Fluid for Potasium(K+),350
+Fluid for Protein,450
+Ketone Bodies-Urine,300
+Pleural Fluid for ADA,1200
+Pleural Fluid for Glucose,200
+Pleural Fluid for Protein,400
+STOOL R/M/E,300
+Semen Analysis,1400
+Specific Gravity - Urine,250
+Sputum Eosinophil,400
+Sputum for AFB (1st Sample),500
+Sputum for AFB (2nd Sample),500
+Sputum for AFB (3rd Sample),500
+Sputum for R/M/E,800
+Stool R/S (Reducing Substance),250
+Stool for Occult Blood Test (OBT),300
+Sugar (Urine),200
+Synovial Fluid for AFB,400
+Synovial Fluid for Gram Stain,400
+Synovial Fluid for R/M/E,800
+Urine R/M/E,300
+Urine R/S (Reducing Substance),300
+Urine for PH,250
+Urobilinogen - Urine,250
+Wet Film,550
+Collection Charge for Fine needle aspiration cytology (FNAC),500
+Activated Partial Thromboplastin Time (APTT),1000
+BT & CT,300
+Blood Film (PBF),450
+Blood Film for Malarial Parasite,400
+Bone Marrow Study,2500
+CBC,400
+CBC with PBF,800
+Circulating Eosinophil Count-TCE,300
+Coomb's Test (Indirect),700
+D-Dimer,1500
+DC,300
+ESR,300
+Factor IX,1000
+Factor VIII,1000
+HB%,400
+HCT,250
+Hb Electrophoresis,1800
+MCH,300
+MCHC,300
+MCV,300
+Malaria Parasite ( MP ),250
+PC (Platelet Count),350
+PCV,300
+Protein C,6000
+Prothrombin Time (INR),700
+RBC,300
+RC (Reticulocyte Count),500
+TC (WBC)),200
+TC/DC/ESR/Hb%,400
+Fine needle aspiration cytology (FNAC Both),2400
+Nipple Discharge for Cytology (Both),1100
+Paps Smear(Cervical cytology),1200
+Pleural Fluid for Cytology,800
+USG Guided Fine needle aspiration cytology (FNAC),1500
+Ascitic Fluid for Cytology,1000
+Colposcopy,4000
+Fine needle aspiration cytology (FNAC),1200
+Histopathology - Intermediate,2000
+Histopathology - Large,2500
+Histopathology - Small,1500
+Histopathology Per slide supply,500
+Histopathology Review - 1 slide,800
+Histopathology Review - 2 slide,1000
+IHC Comprehensive Panel,16000
+Lymphnod for Histopath,1600
+Skin Biopsy,1200
+H.pylori (ICT),600
+25-OH Vitamin D (Total),3000
+25-OH Vitamin D3/D2,6000
+ACTH,1200
+AFP (Alpha-Feto-Protein),1200
+Aldosterone,3200
+Aldosterone Renin ratio,3500
+Anti HCV (ELISA),1500
+Anti-CCP Ab,2000
+Anti-Cardiolipin Ab,2000
+Anti-Chlamydia IgM,1400
+Anti-Chlamydia IgG,1400
+Anti-HBc IgM,1500
+Anti-HBc Total,1200
+Anti-HBe,1200
+Anti-HBs Ab,1200
+Anti-HEV IgG,0
+Anti-HEV IgM,1200
+Anti-Mullerian Hormone (AMH),3500
+Anti-Nuclear Ab (ANA),1200
+Anti-Phospholipid Ab,1800
+Anti-Rubella IgG,1200
+Anti-Rubella IgM,1200
+Anti-TB IgA,1200
+"Anti-TB IgA, IgG, IgM",1200
+Anti-TB IgG (ICT),1100
+Anti-TB IgM (ICT),1100
+Anti-TG (Anti Thyroglobulin Ab),1200
+Anti-TPO (Anti Thyroid Peroxidase Ab),1200
+Anti-Thyroid Antibody,2500
+Anti-ds DNA Ab,1500
+Beta-HCG,1200
+C-ANCA,1200
+C-Peptide,1500
+C3 (Completent 3),1200
+C4 (Completent 4),1200
+CA-125,1200
+CEA,1200
+CMV IgG Avidity,1200
+Cancer Antigen (CA -15.3),1400
+Cancer Antigen (CA-19.9),1200
+Cortisol (Evening 4:00 pm - 6:00 pm),1100
+Cortisol (Morning 7:00 am - 9:00 am),1100
+Cytomegalo Virus (CMV) IgG,1200
+Cytomegalo Virus (CMV) IgG & IgM,1200
+Cytomegalo Virus (CMV) IgM,1200
+ENA Profile,8000
+Estradiol/Oestrogen,1200
+FSH,1200
+FT3,1200
+FT4,1200
+Faecal Calprotectin,5000
+Free PSA,1200
+Free Testosterone,1600
+Growth Hormone,1200
+HAV IgM,1200
+HBe Ag,1200
+HBs Ag (ELISA),1000
+HIV I & II (ELISA),1200
+Herpes Simplex Virus I IgG,1200
+Herpes Simplex Virus I IgM,1200
+Herpes Simplex Virus II IgG,1200
+Herpes Simplex Virus II IgM,1200
+High Sensitive Troponin-I,1200
+Homocysteine,3000
+ICT for Kalazar,1000
+IgE Total,1200
+Interleukin - 6 ( IL- 6 ),2000
+LH FSH Ratio,2400
+Lupus Anticoagulant Ab,5000
+Luteinizing Hormone (LH),1200
+Micro-Filaria,1100
+Mumps Virus Ab IGG & IGM,5500
+NT-Pro BNP,3000
+P-ANCA,1200
+PSA,1400
+Parathyroid Hormone (PTH),1500
+Pro BNP,3000
+Procalcitonin (PCT),2000
+Progesterone,1200
+Prolactin,1200
+Pus for GeneXpert,5000
+QuantiFERON-TB Gold Plus,8000
+Renin (Direct),2500
+Rubella / Measles IgG and IgM,5800
+Rubella IgG,3000
+Rubella IgM,3000
+S. IgG for H.pylori,1200
+S. IgM for H.pylori,1700
+S.Ferritin,1200
+Serum ACE Level ( Serum Angiotensin Converting Enzyme),3800
+Serum IgA Level,1000
+Serum IgA Level,1100
+Serum IgG Level,1100
+Serum IgM Level,1100
+Sputum For MTB Genexpert,5000
+Stool for H. Pylori Antigen,1400
+T3,1000
+T4,1000
+TSH Receptor Antibody (TRAb),5250
+"TSH, FT3, FT4",3400
+Testosterone,1300
+Thyroglobulin (TG),3000
+Thyroid Stimulating Hormone (TSH),1000
+Torch Panel,7000
+Toxoplasma IgG,1200
+Toxoplasma IgM,1200
+Troponin I (cTnI),1100
+Vitamin A,8000
+Vitamin B-12,2500
+Vitamin E,5500
+AFB STAINING / AFB GRAM STAINING,400
+Ascitic Fluid for C/S,1000
+Ascitic Fluid for Gram Stain,500
+Blood for C/S (FAN),1800
+CSF for AFB,400
+CSF for C/S,1000
+CSF for Gram Stain,400
+Cervical Swab for Gram Stain,400
+Conjunctival Swab for C/S (Lt./Rt.),700
+Conjunctival swab for Gram Stain Lt/Rt,400
+Ear Swab C/S,700
+Ear swab for Culture Gram Stain (Lt/Rt),400
+Fluid for Fungus Culture,1000
+Fungus M/E,400
+Gram's Stain,400
+Grams Stain for PUS/ Wound / Fluid,600
+HVS for AFB,500
+HVS for C/S,1000
+HVS for Fungus Culture,1000
+HVS for Gram Stain,400
+Mantoux Test/MT Test,500
+Nail Scraping for Fungus Culture,500
+Nail Scrapings for R/M/E,400
+Nipple for gram stain,500
+Oral Swab for C/S,1000
+Oral Swab for R/M/E,400
+Pericardial Fluid for AFB,400
+Pericardial Fluid for C/S,1000
+Pericardial Fluid for Gram Stain,400
+Peritoneal Fluid for AFB,400
+Peritoneal Fluid for C/S,1000
+Peritoneal Fluid for Gram Stain,400
+Pleural Fluid for AFB,400
+Pleural Fluid for C/S,1000
+Pleural Fluid for Gram Stain,400
+Prostatic Smear AFB,400
+Prostatic Smear for C/S,700
+Prostatic Smear for Gram Stain,400
+Pus for AFB,500
+Pus for C/S,1100
+S. A/G Ratio,900
+Semen for C/S,700
+Skin Scraping for Fungus Culture,900
+Skin Scrapings for fungus,500
+Sputum for AFB,500
+Sputum for C/S,1100
+Sputum for Gram Stain,500
+Stool for C/S,900
+Synovial Fluid for C/S,700
+Throat Swab For R/M/E,400
+Throat Swab for C/S,1100
+Throat Swab for Gram Stain,450
+Tracheal Aspirate for AFB,400
+Tracheal Aspirate for Gram Stain,400
+Umbilical Swab for C/S,1000
+Umbilical Swab for Gram Stain,400
+Urethral Discharge for AFB,400
+Urethral Discharge for C/S,500
+Urethral Discharge for Gram Stain,400
+Urine for AFB,400
+Urine for C/S,750
+Vaginal Discharge/ swab for Fungus Culture,700
+Vaginal Swab for C/S,1100
+Vaginal Swab for Fungus,500
+Vaginal Swab for Gram Stain,500
+Vaginal Swab for R/M/E,400
+Wound Swab for C/S,1100
+Wound Swab for Gram Stain,500
+HCV Genotyping,12500
+HCV-RNA (Quantitative),12000
+HLA-A Typing (DNA based),9000
+HLA-B Typing (DNA based),8000
+HLA-B27 Genotyping,4000
+HLA-DR Typing (DNA Based),9000
+HPV-DNA Array Genotyping,6000
+Hepatitis B Virus (HBV DNA) Quantitative,8000
+JAK2 Mutation Detection,9500
+ASO Titre,700
+Anti Sperm Anti Body,1000
+Anti-HCV (ICT),1000
+Blood Grouping and Rh Factor,300
+CRP (C-Reactive Protein),600
+Chikungunya IgG (ICT),1200
+"Chikungunya IgG,IgM (ICT)",1200
+Chikungunya IgM (ICT),1200
+Dengue Antibody IgM IgG (ICT),300
+Dengue NS1Ag (ICT),300
+Echinococcus Ab (IHA),2200
+Epstein-Barr Virus (EBV) IgG,3000
+Epstein-Barr Virus (EBV) IgM,3000
+Febrile Antigen/ Triple Antigen,1200
+Filaria (ICT),1000
+HBsAg (ICT),450
+HIV (ICT),1000
+Malaria (ICT),1100
+RA /RF Test,600
+Rh-Antibody Titre,800
+Rose Waaler Test,500
+Salmonella Typhi IgM IgG (ICT),2200
+Sex Hormone Binding Globulin (SHBG),1200
+TPHA (ICT),800
+TPHA - Treponema Pallidum Haemagglutination (Q & Q),1400
+Urine for Pregnancy Test (ICT),200
+VDRL,600
+VDRL(Q&Q),1200
+Widal Test,500
+CMV IGG Avidity II,0
+vWF (von Willebrand Factor),8000
+Coomb's Test,700
+Coomb's Test (Direct),700
+CT Guided FNAC,3000
+"FOL, Fibre optic laryngoscopy",2000
+USG of External Genitalia,2000
+DOPPLER STUDY OF TESTIS & SCROTAL VESSELS,3500
+DUPLEX STUDY OF BOTH UPPER LIMB VESSLES,3000
+DUPLEX STUDY OF LOWER LIMB VESSELS RT/LT,2000
+DUPLEX STUDY OF RENAL VESSELS TO EXCLUDE RAS,4000
+Duplex study of abdominal aorta,4000
+Duplex study of all limbs,5000
+Duplex study of both lower limbs,3000
+Duplex study of carotid vessels,3500
+Duplex study of lower limb RT/LT,2000
+Duplex study of neck vessels,3500
+Duplex study of penis,3700
+Duplex study of upper limb RT/LT,2000
+TVS (Color Doppler),2500
+TVS (Tansvaginal ultrasound),2000
+TVS Folliculometry,2500
+USG CHEST,1600
+USG KUB & LOWER ABDOMEN,1800
+USG LOWER ABDOMEN,1600
+USG LOWER ABDOMEN WITH PVR & MCC,1600
+USG OF BREAST (BOTH SIDE) COLOR,2500
+USG OF ANOMALY SCAN,3000
+USG OF BOTH KNEE JOINT (LT/RT/ BOTH),1800
+USG OF BRAIN,2000
+USG OF HBS,1200
+USG OF KUB WITH PVR,1200
+USG OF LT. UPPER THIGH,2000
+USG OF PENIS,2000
+USG OF PREGNANCY PROFILE,1500
+USG OF PREGNANCY PROFILE (4D),1800
+USG OF PREGNANCY PROFILE (COLOR DOPPLER STUDY),3000
+USG OF SCROTUM,1800
+USG OF SWELLING/ LUMP,3000
+USG OF WHOLE ABDOMEN,1800
+USG OF WHOLE ABDOMEN with PVR,1800
+USG Of Inguinal Region,1500
+USG Of Left Elbow Swelling,1800
+USG Of Right Elbow Swelling,1800
+USG Of Right shoulder,1800
+USG PAROTID REGION (LT/RT/BOTH),2500
+USG Urinary System (urethra/urethral meatus),1300
+USG of Breast (Single) Color,1700
+USG of Testis,1400
+USG of Upper Abdomen,1600
+USG of Elbow Swelling Both,1800
+USG of KUB with Pelvis,1700
+USG of Knee LT,2100
+USG of Knee RT,2100
+USG of L/A with Pregnancy Profile,1800
+USG of LT Breast,2000
+USG of LT Thigh,700
+USG of Lower Abdomen (L/A),1600
+USG of NECK,1800
+USG of Nuchal Translucency (NT)scan,3000
+USG of RT Breast,2000
+USG of RT Thigh,700
+USG of SONO HYSTEROSALPHINGOGRAPHY,2200
+USG of Thyroid - 2D,1200
+USG of Twin pregnancy,2500
+USG of pregnancy with biophysical profile,2500
+USG of submental region,1800
+USG- Trans Rectal-prostate,2000
+Vein mapping of lt./RT. Upper limb,4500
+Colonoscopy With Shrot G/A,2000
+B/V Sacrococygeal Digital,700
+Both shoulder a/p view,1000
+D/L SPINE B/V (X-RAY ) Digital,800
+Elbow Jt B/V (Digital),700
+Hand B/V (Digital),700
+Heel B/V (Digital),600
+Humars B/V (Digital),700
+Knee Jt B/V (Digital),700
+LEFT HIP OBLIQUE VIEW,500
+LT. ANKLE WITH LOWER LEG B/V (DIGITAL),800
+Leg B/V (Digital),700
+OPG,450
+RT Leg & Lower Leg,700
+RT/LT FEMUR INCLUDING KNEE (AP & LAT VIEW),700
+Wrist B/V,700
+X Ray-Chest P/A View,500
+X-RAY LT FOREARM WITH ELBOW AND WRIST JT B/V (DIGITAL),800
+X-RAY lumbosacral (L/S) Spine B/V(Digital),700
+X-RAY Abdomen in Erect Posture (Digital ),700
+X-RAY Acromioclavicular Joint LT. A/P View,500
+X-RAY Acromioclavicular Joint RT. A/P View,500
+X-RAY Ankle Mortise LT. B/V,600
+X-RAY Ankle Mortise RT. B/V,600
+X-RAY BOTH Scapula B/V,1300
+X-RAY Bone Age P/A View,500
+X-RAY Both Hip A/P View (Digital),700
+X-RAY Both TIM joint AP lateral view (Digital),700
+X-RAY Both shoulder A/P view,800
+X-RAY Both thigh B/V,1300
+X-RAY Both wrist joint B/V (Digital),1000
+X-RAY Cervical Spine A/P View,500
+X-RAY Cervical Spine B/V (Digital),800
+X-RAY Cervical Spine Both oblique view,800
+X-RAY Cervical Spine LT. Lat View,500
+X-RAY Cervical Spine LT. Oblique View,500
+"X-RAY Cervical Spine RT, Oblique View",500
+X-RAY Cervical Spine RT. Lat View,500
+X-RAY Cervical Spine flexion-extension View,700
+X-RAY Cervical lateral view,500
+X-RAY Chest AP view (Digital),500
+X-RAY Chest Apical View,500
+X-RAY Chest B/V (Digital),800
+X-RAY Chest Decubitus view,500
+X-RAY Chest LT. Oblique view,500
+X-RAY Chest LT. oblique view (Digital),500
+X-RAY Chest P/A View (100%),500
+X-RAY Chest P/A View (Digital),500
+X-RAY Chest RT. Oblique view,500
+X-RAY Chest RT. Oblique view (Digital),500
+X-RAY Chest Right lateral view (Digital),500
+X-RAY Chest for Ribs A/P View,500
+X-RAY Chest left lateral view (Digital),500
+X-RAY Chest lordotic view,500
+X-RAY Clavical AP (Digital),500
+X-RAY Coccyx B/V,700
+X-RAY Dorsal Spine A/P View,500
+X-RAY Dorsal Spine B/V,700
+X-RAY Dorsal Spine LT. Lat View,500
+X-RAY Dorsal Spine LT. Oblique View,500
+X-RAY Dorsal Spine RT. Lat View,500
+X-RAY Dorsal Spine RT. Oblique view,500
+X-RAY Dorsal spine AP,500
+X-RAY Dorsal spine lateral view (Digital),500
+X-RAY Dorso Lumber LT. Oblique View,500
+X-RAY Dorso Lumber RT. Lat View,500
+X-RAY Dorso Lumber RT. Oblique view,500
+X-RAY Dorso Lumber Spine A/P View,500
+X-RAY Dorso Lumber Spine LT. Lat View,500
+X-RAY Dorso Lumber spine flexion-extension View,700
+X-RAY Dorso lumber Spine B/V (Digital),700
+X-RAY Elbow Joint Including Forearm LT. B/V,800
+X-RAY Elbow Joint Including Forearm RT. B/V,800
+X-RAY Face B/V ( Digital),700
+X-RAY Face lateral view (Digital),500
+X-RAY Foot AP view (Digital),600
+X-RAY Foot B/V (Digital),600
+X-RAY Foot lateral view (Digital),600
+X-RAY Forearm Including Wrist Joint LT. B/V,800
+X-RAY Forearm Including Wrist Joint RT. B/V,800
+X-RAY Frontal Bone B/V,700
+X-RAY Frontal Bone Lat View,500
+X-RAY Frontal Bone P/A view,500
+X-RAY Hip Joint Frog Leg Lateral View,1000
+X-RAY Hip joint B/V (Digital),1000
+X-RAY IVU (Digital),2000
+X-RAY KUB Region (Digital),500
+X-RAY Knee Joint Including Leg LT. B/V,800
+X-RAY Knee Joint Including Leg RT. B/V,800
+X-RAY Knee skyline view,700
+X-RAY LT. Ankle joint B/V (Digital),600
+X-RAY LT. Calcaneus.,600
+X-RAY LT. Calvicle AP,500
+X-RAY LT. Elbow joint B/V (Digital),700
+X-RAY LT. Foot AP & oblique view,600
+X-RAY LT. Foot B/V (Digital),600
+X-RAY LT. Fore arm B/V (Digital),700
+X-RAY LT. HEEL B/V (Digital),600
+X-RAY LT. HIP joint B/V (Digital),1000
+X-RAY LT. HIP joint L/V (Digital),1000
+X-RAY LT. HIP with femaor B/V (Digital),800
+X-RAY LT. Hand B/V (Child),700
+X-RAY LT. Hand B/V (Digital),700
+X-RAY LT. Humerus (Digital),700
+X-RAY LT. Knee joint B/V (Digital),700
+X-RAY LT. Knee skylin view ( Digital),700
+X-RAY LT. Leg B/V (Digital),700
+X-RAY LT. Scapula B/V,700
+X-RAY LT. Shoulder AP view (Digital),500
+X-RAY LT. Shoulder joint B/V,800
+X-RAY LT. Thigh B/V,700
+X-RAY LT. Thumb joint (Digital),700
+X-RAY LT. arm & elbow AP lateral,800
+X-RAY LT. arm B/V,700
+X-RAY LT. finger B/V,700
+X-RAY LT. leg B/V (Digital),700
+X-RAY LT. wrist joint B/V (Digital),700
+X-RAY LT. wrist with elbow joint B/V (Digital),800
+X-RAY Lang styloid process trans. oblique view,500
+X-RAY Left Tibia & Febula (Digital),700
+X-RAY Left femaor (Digital),700
+X-RAY Left index Finger (Digital),700
+X-RAY Left toe B/V (Digital),600
+X-RAY Lower Abdomen,500
+X-RAY Lumber LT. Oblique View,500
+X-RAY Lumber RT. Oblique view,500
+X-RAY Lumber Spine A/P View,500
+X-RAY Lumber spine AP (Digital),500
+X-RAY Lumber spine flexion-extension View,700
+X-RAY Lumber spine lateral (Digital),500
+X-RAY Lumbo sacral (L/S) LT. Oblique View,500
+X-RAY Lumbo sacral (L/S) RT. Lat View,500
+X-RAY Lumbo sacral RT. Oblique view,500
+X-RAY Lumbo sacral Spine A/P View,500
+X-RAY Lumbo sacral Spine LT. Lat View,500
+X-RAY Mandible (LT. side),700
+X-RAY Mandible A/P View,500
+X-RAY Mandible B/V,700
+X-RAY Mandible Lat View,500
+X-RAY Mandible RT. lateral,500
+X-RAY Mandibular Region,700
+X-RAY Mastoid Townes view,700
+X-RAY Maxilla A/P View,500
+X-RAY Maxilla Lat view,500
+X-RAY Nasal Bone B/V,700
+X-RAY Nasal Bone Lat View,500
+X-RAY Nasal bone (Digital),500
+X-RAY Nasal bone B/V,700
+X-RAY Nasopharynx Lateral view (Digital),500
+X-RAY Neck AP view (Digital),500
+X-RAY Neck B/V (Digital),700
+X-RAY Neck LAT. view (Digital),500
+X-RAY Neck of Femur LT. B/V,700
+X-RAY Neck of Femur RT. B/V,700
+X-RAY Nose B/V (Digital),700
+X-RAY Nose lateral view (Digital),600
+X-RAY Oblique view of both S/I joint,700
+X-RAY PNS B/V (Digital),700
+X-RAY PNS OM view (Digital),500
+X-RAY PNS lateral view,500
+X-RAY Pelvis AP view (Digital ),500
+X-RAY Pelvis B/V (Digital),700
+X-RAY Pelvis RT. Oblique view,500
+X-RAY Plain abdomen,700
+X-RAY RT THIGH B/V,700
+X-RAY RT index finger B/V (Digital),700
+X-RAY RT. Ankle joint B/V (Digital),600
+X-RAY RT. Calcanius,600
+X-RAY RT. Clavicle AP view (Digital),500
+X-RAY RT. Elbow joint B/V (Digital),700
+X-RAY RT. Femour B/V,700
+X-RAY RT. Finger (Digital),700
+X-RAY RT. Finger B/V (Digital),700
+X-RAY RT. Foot B/V (Digital),600
+X-RAY RT. Fore arm B/V (Digital),700
+X-RAY RT. Great Toe (Digital),600
+X-RAY RT. HIP joint B/V (Digital),1000
+X-RAY RT. HIP with femour B/V (Digital),800
+X-RAY RT. Heel B/V view,600
+X-RAY RT. Heel L/V (Digital),600
+X-RAY RT. Humers (Digital),700
+X-RAY RT. Knee joint B/V (Digital),700
+X-RAY RT. Leg B/V (Digital),700
+X-RAY RT. Leg ankle AP lateral (Digital),800
+X-RAY RT. Scaphoid Bone (Digital),700
+X-RAY RT. Scapula,700
+X-RAY RT. Shoulder AP & Axillary view,800
+X-RAY RT. Shoulder B/V (Digital),800
+X-RAY RT. Shoulder joint AP view (Digital),500
+X-RAY RT. TIBIA & FEBULA (Digital),700
+X-RAY RT. TIM Joint (Digital),700
+X-RAY RT. TIM joint B/V (Digital),700
+X-RAY RT. Thumb joint (Digital),700
+X-RAY RT. arm & elbow AP lateral,800
+X-RAY RT. arm B/V (Digital),700
+X-RAY RT. hand B/V (Digital),700
+X-RAY RT. knee with thigh B/V (Digital),800
+X-RAY RT. wrist joint AP view (Digital),500
+X-RAY RT. wrist joint B/V (Digital),700
+X-RAY S/I joint LT (Digital),700
+X-RAY S/I joint Rt. B/V,700
+X-RAY SI Joint B/V,700
+X-RAY SI Joint LT. Oblique View,700
+X-RAY SI Joint RT. Oblique View,700
+X-RAY Sacro Coxygial AP (Digital),500
+X-RAY Sacro Coxygial RT lateral,500
+X-RAY Sacro Coxygial joint AP lateral,700
+X-RAY Sacrum coccyx B/V (Digital),700
+X-RAY Scaphoid LT. B/V,700
+X-RAY Shoulder Including Arm LT. B/V,800
+X-RAY Shoulder Including Arm RT. B/V,800
+X-RAY Shoulder Joint LT flexion-extension View,700
+X-RAY Shoulder Joint LT. Axial View,500
+X-RAY Shoulder Joint RT flexion-extension View,700
+X-RAY Shoulder Joint RT. Axial View,500
+X-RAY Skull A/P View,500
+X-RAY Skull AP view (Digital),500
+X-RAY Skull B/V (Digital),800
+X-RAY Skull LAT View,500
+X-RAY Skull Oblique view,500
+X-RAY Skull P/A (Digital),500
+X-RAY Skull lateral view,500
+X-RAY Skyline view (Digital),700
+X-RAY Soft tissue neck B/V (Digital),700
+X-RAY Soft tissue neck lateral (Digital),500
+X-RAY Stansvers view (Digital),700
+X-RAY Stayloid Lateral View,500
+X-RAY Stayloid Process B/V,500
+X-RAY Stayloid Process view,500
+X-RAY Sternoclavicular Joint LT. A/P View,500
+X-RAY Sternoclavicular Joint RT. A/P View,500
+X-RAY Styloid Process trans. orbital view,500
+X-RAY T/M joint B/V (Digital),700
+X-RAY TM Joint Close Mouth,500
+X-RAY TM Joint Open Mouth,500
+X-RAY Thoracic SPINE L/V,500
+X-RAY Thoracic Spine A/P View.,500
+X-RAY Thoracic Spine B/V,700
+X-RAY Thoracic Spine B/V (Digital),700
+X-RAY Thoracic Spine LT. Lat View.,500
+X-RAY Thoracic Spine LT. Oblique View,500
+X-RAY Thoracic Spine RT. Lat View,500
+X-RAY Thoracic Spine RT. Oblique view,500
+X-RAY Thoraco Lumber Spine B/V,700
+X-RAY Tunnel View,600
+X-RAY Upper Abdomen,500
+X-RAY lumbosacral (L/S) spine AP view (Digital),500
+X-RAY lumbosacral (L/S) spine Lateral view (Digital),500
+X-RAY optic foramen B/V,700
+X-RAY whole Body View (Child),500
+X-Ray Both Knee Joint Skyline View,1000
+X-Ray Both Knee Joint Standing A/P View,700
+X-Ray Both Knee Joint Standing B/V,1000
+X-Ray Both SI joint B/V,700
+X-Ray Chest Both Lateral View,1000
+X-Ray Chest Both Oblique View,1000
+X-Ray Clavicle B/V,700
+X-Ray Dorsal Spine Both Oblique View,700
+X-Ray Femar B/V (Digital),700
+X-Ray Forearm B/V,700
+X-Ray LT HIP with FEMUR LT,800
+X-Ray Lt Knee Joint Standing B/V,600
+X-Ray Lumber Both Oblique view,700
+X-Ray MANDIBLE BOTH VIEW,700
+X-Ray Mandle B/V,700
+X-Ray Orbit B/V,700
+X-Ray Orbit oblique View,700
+X-Ray Rt Knee Joint Standing B/V,600
+X-Ray SI Joint Ferguson VIEW,700
+X-Ray lumbo-Sacral Both Oblique View,800
+X-ray Both Ankle joint B/V,1000
+X-ray Both Foot joint B/V,1000
+X-ray Both Knee joint B/V,1200
+X-ray Chest B/V,1200
+X-ray Left scapula b/v,700
+X-ray R/L Foot (Weight Bearing) - A/P & Lateral View,700
+X-ray Right scapula b/v,700
+X-ray both Wrist B/V,1000
+x-ray Hand /wrist/Arm/Forearm child R/L (single),700
+Polygram TH,0
+ECG,400
+2D ECHO,1500
+4D Colour Echo,3000
+ECHO- Colour Doppler,2500
+X-Ray Single Tooth RVG,500
+Consultation by Family Physician,300
+Consultation by Male/Female Family Physician,300
+Consultation with Diabetologist,0
+"Height, Weight & Vitals by Nurse",0
+COLLECTION CHARGE,60
+COLLECTION CHARGE,300
+Collection Charge,80
+Collection Charge,80
+Collection Charge,200
+Collection Charge,100
+Suturing Wounds (Large) 8-10+ stiches,1000
+USG Guided Collection Charge for Fine needle aspiration cytology (FNAC),700
+75gm Glucose,40
+BUTTERFLY NEEDLE/LUER ADAPTER,50
+"CONTRUST (CT CHEST, CT ABDOMEN) SAME PATIENT.",3000
+CT CONTRUST (Omnipaque/Amidol) 100ml/50ml,2550
+CT CONTRUST (Omnipaque/Amidol) 50ml,1450
+EAR SWAB FOR R/E,200
+ESR (Tube),25
+EXTRA CHARGE,700
+EXTRA CHARGE,100
+EXTRA CHARGE,500
+EXTRA CHARGE REPORT,20
+Fan Method Tube,400
+MRI CONTRUST (Omniscane) 10ml,2550
+MRI OF CONTRUST,2500
+PETRIDISH,30
+PLURAL FLUID FOR CELLULAR STUDY,200
+Registration & Counselling about Test Preparations,100
+SPUTUM FOR CYTOLOGY with R/E,1000
+VACUETTE PURPLE 3/4 ML,15
+VACUETTE RED 3/4 ML,15
+VACUETTE BLUE 2/3 ML,15
+VACUETTE GRAY 2ML,15
+VACUETTE GREEN 2/3 ML,15
+VACUETTE NEEDLE,15
+VACUETTE VIOLET 2/3 ML,15
+Bone Marrow Study Collection Charge,2000
+Corporate & Field Support,1000
+Eye checkup,100
+Eye screening - Optometry,500
+FMR Form Fill up Fee,300

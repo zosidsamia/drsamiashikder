@@ -67,6 +67,20 @@ import HistoryFeaturesPanel from "../components/HistoryFeatures";
 import NewPrescriptionMode from "../components/NewPrescriptionMode";
 import PatientForm from "../components/PatientForm";
 import {
+  AccountTab,
+  AdviceTab,
+  AppointmentsTab,
+  ChatTab,
+  ComplaintsTab,
+  HandoverTab,
+  InvPaymentTab,
+  PendingTab,
+  ProceduresTab,
+  ReferralsTab,
+  SOAPNotesTab,
+  TimelineTab,
+} from "../components/PatientTabs";
+import {
   CurrentMedicationList,
   FirstPrescriptionLabel,
   PrescriptionDiffRow,
@@ -939,6 +953,7 @@ export default function PatientProfile() {
     null,
   );
   const [showReassignConsultant, setShowReassignConsultant] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
 
   const role = (currentDoctor?.role ?? "staff") as StaffRole;
   const canViewAudit =
@@ -1505,6 +1520,53 @@ export default function PatientProfile() {
             </div>
           </motion.div>
 
+          {/* Patient Profile Tab Navigation */}
+          <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm mb-4">
+            <div className="overflow-x-auto">
+              <div className="flex min-w-max px-2">
+                {(
+                  [
+                    { id: "overview", label: "Overview" },
+                    { id: "history", label: "\ud83d\udccb History" },
+                    {
+                      id: "prescriptions",
+                      label: "\ud83d\udc8a Prescriptions",
+                    },
+                    {
+                      id: "investigations",
+                      label: "\ud83e\uddea Investigations",
+                    },
+                    { id: "procedures", label: "\ud83d\udd2c Procedures" },
+                    { id: "vitals", label: "\u2764\ufe0f Vitals" },
+                    { id: "complaints", label: "\ud83d\udcdd Complaints" },
+                    { id: "advice", label: "\ud83d\udca1 Advice" },
+                    { id: "timeline", label: "\ud83d\udd50 Timeline" },
+                    { id: "chat", label: "\ud83d\udcac Chat" },
+                    { id: "appointments", label: "\ud83d\udcc5 Appointments" },
+                    { id: "pending", label: "\u23f3 Pending" },
+                    { id: "handover", label: "\ud83e\udd1d Handover" },
+                    { id: "referrals", label: "\ud83d\udce4 Referrals" },
+                    { id: "soap-notes", label: "\ud83d\uddd2 SOAP Notes" },
+                    { id: "account", label: "\u2699\ufe0f Account" },
+                    { id: "inv-payment", label: "\ud83e\uddfe Inv. Payment" },
+                  ] as Array<{ id: string; label: string }>
+                ).map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-3 py-3 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors duration-150 ${
+                      activeTab === tab.id
+                        ? "border-blue-500 text-blue-600 bg-blue-50"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
           {/* CURRENT VITALS */}
           <div>
             <h2 className="text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -2432,6 +2494,88 @@ export default function PatientProfile() {
         </main>
       </div>
 
+      {/* New Patient Profile Tabs */}
+      {patientId !== null && activeTab === "procedures" && (
+        <ProceduresTab
+          patientId={patientId}
+          canWrite={
+            role === "consultant_doctor" ||
+            role === "medical_officer" ||
+            role === "admin"
+          }
+        />
+      )}
+      {patientId !== null && activeTab === "complaints" && (
+        <ComplaintsTab
+          patientId={patientId}
+          patientName={patient.fullName}
+          canWrite={
+            role === "consultant_doctor" ||
+            role === "medical_officer" ||
+            role === "nurse" ||
+            role === "admin"
+          }
+        />
+      )}
+      {patientId !== null && activeTab === "advice" && (
+        <AdviceTab
+          patientId={patientId}
+          canWrite={
+            role === "consultant_doctor" ||
+            role === "medical_officer" ||
+            role === "admin"
+          }
+        />
+      )}
+      {patientId !== null && activeTab === "timeline" && (
+        <TimelineTab
+          patientId={patientId}
+          visits={visits || []}
+          prescriptions={prescriptions || []}
+          patient={patient}
+        />
+      )}
+      {patientId !== null && activeTab === "chat" && (
+        <ChatTab
+          patientId={patientId}
+          patientName={patient.fullName}
+          currentUserName={currentDoctor?.name ?? "Doctor"}
+        />
+      )}
+      {patientId !== null && activeTab === "appointments" && (
+        <AppointmentsTab patientId={patientId} canWrite={role !== "patient"} />
+      )}
+      {patientId !== null && activeTab === "pending" && (
+        <PendingTab patientId={patientId} prescriptions={prescriptions || []} />
+      )}
+      {patientId !== null && activeTab === "handover" && (
+        <HandoverTab patientId={patientId} />
+      )}
+      {patientId !== null && activeTab === "referrals" && (
+        <ReferralsTab
+          patientId={patientId}
+          canWrite={
+            role === "consultant_doctor" ||
+            role === "medical_officer" ||
+            role === "admin"
+          }
+        />
+      )}
+      {patientId !== null && activeTab === "soap-notes" && (
+        <SOAPNotesTab
+          patientId={patientId}
+          isAdmitted={patient?.patientType === "admitted"}
+          canWrite={
+            role === "consultant_doctor" ||
+            role === "medical_officer" ||
+            role === "intern_doctor" ||
+            role === "admin"
+          }
+        />
+      )}
+      {patientId !== null && activeTab === "inv-payment" && (
+        <InvPaymentTab patientId={patientId} patientName={patient.fullName} />
+      )}
       {/* Edit Patient Dialog */}
       <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
         <DialogContent

@@ -4,14 +4,7 @@
  * Receipt has a prominent clinic header.
  */
 import { Button } from "@/components/ui/button";
-import {
-  Download,
-  MessageCircle,
-  Printer,
-  Receipt,
-  RotateCcw,
-  X,
-} from "lucide-react";
+import { MessageCircle, Receipt, RotateCcw, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import type { MoneyReceiptData, PaymentMethod, RefundRecord } from "../types";
@@ -60,6 +53,7 @@ function WalkInReceiptDoc({
 
   return (
     <div
+      id="walkin-receipt-printable"
       ref={printRef}
       className="bg-white rounded-xl overflow-hidden relative"
       style={{
@@ -633,41 +627,20 @@ export default function WalkInReceiptModal({
 }) {
   const [receipt, setReceipt] = useState(initialReceipt);
   const printRef = useRef<HTMLDivElement>(null!);
-  const [saving, setSaving] = useState(false);
   const [showRefund, setShowRefund] = useState(false);
-
-  function handleSave() {
-    saveReceiptToStore(receipt);
-    toast.success(`Receipt ${receipt.receiptNumber} saved`);
-  }
+  const [paperSize, setPaperSize] = useState<"A4" | "A5" | "A3">("A4");
 
   function handlePrint() {
-    handleSave();
+    const old = document.getElementById("_wlk_ps");
+    if (old) old.remove();
+    const s = document.createElement("style");
+    s.id = "_wlk_ps";
+    s.textContent = `@media print{@page{size:${paperSize};margin:10mm}body *{visibility:hidden!important}#walkin-receipt-printable,#walkin-receipt-printable *{visibility:visible!important}#walkin-receipt-printable{position:fixed;left:0;top:0;width:100%}.no-print{display:none!important}}`;
+    document.head.appendChild(s);
     window.print();
-  }
-
-  async function handleDownload() {
-    if (!printRef.current) return;
-    setSaving(true);
-    try {
-      const html2canvas = (await import("html2canvas")).default;
-      const canvas = await html2canvas(printRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-      });
-      const dataUrl = canvas.toDataURL("image/png");
-      const link = document.createElement("a");
-      link.href = dataUrl;
-      link.download = `receipt-${receipt.receiptNumber}.png`;
-      link.click();
-      handleSave();
-      toast.success("Receipt downloaded");
-    } catch {
-      toast.error("Could not generate download. Use Print instead.");
-    } finally {
-      setSaving(false);
-    }
+    setTimeout(() => {
+      document.getElementById("_wlk_ps")?.remove();
+    }, 2000);
   }
 
   function handleRefund(refund: RefundRecord) {
@@ -812,25 +785,29 @@ export default function WalkInReceiptModal({
                   </Button>
                 )}
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50"
-                onClick={handleDownload}
-                disabled={saving}
-                data-ocid="walkin_receipt.download_button"
-              >
-                <Download className="w-4 h-4" />
-                {saving ? "Generating…" : "Download"}
-              </Button>
-              <Button
-                className="gap-1.5 bg-primary hover:bg-primary/90"
+            <div className="no-print space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium text-gray-600">
+                  Paper Size:
+                </span>
+                {(["A4", "A5", "A3"] as const).map((sz) => (
+                  <button
+                    key={sz}
+                    type="button"
+                    onClick={() => setPaperSize(sz)}
+                    className={`px-3 py-1 text-sm rounded border transition-colors ${paperSize === sz ? "bg-teal-600 text-white border-teal-600" : "bg-white text-gray-700 border-gray-300 hover:border-teal-500"}`}
+                  >
+                    {sz}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
                 onClick={handlePrint}
-                data-ocid="walkin_receipt.print_button"
+                className="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 rounded-lg font-semibold"
               >
-                <Printer className="w-4 h-4" />
-                Print
-              </Button>
+                Print / Download Receipt
+              </button>
             </div>
           </div>
         </div>

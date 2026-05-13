@@ -11,16 +11,14 @@ import { Label } from "@/components/ui/label";
 import {
   CheckCircle2,
   CreditCard,
-  Download,
   FileText,
   MessageCircle,
-  Printer,
   Receipt,
   RotateCcw,
   Search,
   X,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type {
   InvestigationLineItem,
@@ -98,6 +96,7 @@ function InvestigationReceiptDoc({
 
   return (
     <div
+      id="receipt-printable-inv"
       ref={printRef}
       className="bg-white border-2 border-gray-200 rounded-xl p-8 relative overflow-hidden"
       style={{ fontFamily: "serif", minWidth: 420 }}
@@ -354,41 +353,20 @@ function ReceiptModal({
 }) {
   const [receipt, setReceipt] = useState(initialReceipt);
   const printRef = useRef<HTMLDivElement>(null!);
-  const [saving, setSaving] = useState(false);
   const [showRefund, setShowRefund] = useState(false);
-
-  function handleSave() {
-    saveReceiptToStore(receipt);
-    toast.success(`Receipt ${receipt.receiptNumber} saved`);
-  }
+  const [paperSize, setPaperSize] = useState<"A4" | "A5" | "A3">("A4");
 
   function handlePrint() {
-    handleSave();
+    const old = document.getElementById("_inv_ps");
+    if (old) old.remove();
+    const s = document.createElement("style");
+    s.id = "_inv_ps";
+    s.textContent = `@media print{@page{size:${paperSize};margin:10mm}body *{visibility:hidden!important}#receipt-printable-inv,#receipt-printable-inv *{visibility:visible!important}#receipt-printable-inv{position:fixed;left:0;top:0;width:100%}.no-print{display:none!important}}`;
+    document.head.appendChild(s);
     window.print();
-  }
-
-  async function handleDownload() {
-    if (!printRef.current) return;
-    setSaving(true);
-    try {
-      const html2canvas = (await import("html2canvas")).default;
-      const canvas = await html2canvas(printRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-      });
-      const dataUrl = canvas.toDataURL("image/png");
-      const link = document.createElement("a");
-      link.href = dataUrl;
-      link.download = `receipt-${receipt.receiptNumber}.png`;
-      link.click();
-      handleSave();
-      toast.success("Receipt downloaded");
-    } catch {
-      toast.error("Could not generate download. Use Print instead.");
-    } finally {
-      setSaving(false);
-    }
+    setTimeout(() => {
+      document.getElementById("_inv_ps")?.remove();
+    }, 2000);
   }
 
   function handleRefund(refund: RefundRecord) {
@@ -528,25 +506,29 @@ function ReceiptModal({
                   </Button>
                 )}
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50"
-                onClick={handleDownload}
-                disabled={saving}
-                data-ocid="inv_receipt.download_button"
-              >
-                <Download className="w-4 h-4" />
-                {saving ? "Generating…" : "Download"}
-              </Button>
-              <Button
-                className="gap-1.5 bg-primary hover:bg-primary/90"
+            <div className="no-print space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium text-gray-600">
+                  Paper Size:
+                </span>
+                {(["A4", "A5", "A3"] as const).map((sz) => (
+                  <button
+                    key={sz}
+                    type="button"
+                    onClick={() => setPaperSize(sz)}
+                    className={`px-3 py-1 text-sm rounded border transition-colors ${paperSize === sz ? "bg-teal-600 text-white border-teal-600" : "bg-white text-gray-700 border-gray-300 hover:border-teal-500"}`}
+                  >
+                    {sz}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
                 onClick={handlePrint}
-                data-ocid="inv_receipt.print_button"
+                className="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 rounded-lg font-semibold"
               >
-                <Printer className="w-4 h-4" />
-                Print
-              </Button>
+                Print / Download Receipt
+              </button>
             </div>
           </div>
         </div>
@@ -585,8 +567,45 @@ function NewPaymentView({
   const [invoiceStep, setInvoiceStep] = useState<"form" | "invoice" | "paid">(
     "form",
   );
+  const [csvRates, setCsvRates] = useState<{ name: string; rate: number }[]>(
+    [],
+  );
+  useEffect(() => {
+    fetch("/assets/investigation-rates.csv")
+      .then((r) => (r.ok ? r.text() : Promise.reject()))
+      .then((text) => {
+        const parsed = text
+          .trim()
+          .split(/\r?\n/)
+          .slice(1)
+          .map((line) => {
+            const i = line.lastIndexOf(",");
+            return {
+              name: line.slice(0, i).replace(/^"|"$/g, "").trim(),
+              rate: Number.parseFloat(line.slice(i + 1)) || 0,
+            };
+          })
+          .filter((r) => r.name && r.rate > 0);
+        setCsvRates(parsed);
+      })
+      .catch(() => {});
+  }, []);
 
-  const checkedRates = rates.filter((r) => selected[r.id]?.checked);
+  // Merge CSV rates with localStorage rates (localStorage takes precedence)
+  const localNames = new Set(rates.map((r) => r.name?.toLowerCase()));
+  const mergedRates = [
+    ...rates,
+    ...csvRates
+      .filter((r) => !localNames.has(r.name.toLowerCase()))
+      .map((r) => ({
+        id: `csv_${r.name}`,
+        name: r.name,
+        rate: r.rate,
+        category: "Imported",
+      })),
+  ];
+
+  const checkedRates = mergedRates.filter((r) => selected[r.id]?.checked);
   const subtotal = checkedRates.reduce(
     (sum, r) => sum + r.rate * (selected[r.id]?.qty ?? 1),
     0,
@@ -680,7 +699,7 @@ function NewPaymentView({
     onReceiptGenerated(receipt);
   }
 
-  if (rates.length === 0) {
+  if (rates.length === 0 && csvRates.length === 0) {
     return (
       <div
         className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3 text-center"
@@ -820,7 +839,7 @@ function NewPaymentView({
           </p>
         </div>
         <div className="divide-y divide-border max-h-72 overflow-y-auto">
-          {rates.map((rate, idx) => {
+          {mergedRates.map((rate, idx) => {
             const s = selected[rate.id] ?? { checked: false, qty: 1 };
             const lineAmt = s.checked ? rate.rate * (s.qty || 1) : null;
             return (
@@ -1097,7 +1116,7 @@ function PaymentHistoryView({ patientId }: { patientId: string }) {
                     onClick={() => setViewing(r)}
                     data-ocid={`inv_payment.history.view_button.${idx + 1}`}
                   >
-                    <Printer className="w-3 h-3" />
+                    <FileText className="w-3 h-3" />
                     View
                   </Button>
                   {r.phone && (

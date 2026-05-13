@@ -35,6 +35,7 @@ import {
   Stethoscope,
   User,
   UserCheck,
+  X,
   XCircle,
 } from "lucide-react";
 import { motion } from "motion/react";
@@ -54,7 +55,7 @@ import {
 } from "./hooks/useEmailAuth";
 import type { DoctorAccount, PatientAccount } from "./hooks/useEmailAuth";
 import { useMigration } from "./hooks/useMigration";
-import { setCanisterActor } from "./hooks/useQueries";
+import { getCanisterActor, setCanisterActor } from "./hooks/useQueries";
 import AppointmentPayment from "./pages/AppointmentPayment";
 import Appointments from "./pages/Appointments";
 import AuditLog from "./pages/AuditLog";
@@ -1243,53 +1244,156 @@ function AppInner() {
     typeof createActor
   > | null>(null);
 
+  const [backendDisconnected, setBackendDisconnected] = useState(false);
+
   useEffect(() => {
     // Guard: only create actor once
     if (canisterActorRef.current) return;
-    try {
-      const canisterId =
-        ((window as unknown as Record<string, unknown>)
-          .CANISTER_ID_BACKEND as string) ??
-        (import.meta as unknown as Record<string, Record<string, string>>).env
-          ?.CANISTER_ID_BACKEND ??
-        "";
-      if (!canisterId) {
-        console.error(
-          "[sync] CANISTER_ID_BACKEND is empty or undefined — canister actor not created. " +
-            "All sync attempts will fail until this is resolved. " +
-            "Check that the backend canister is deployed and the env var is set.",
-        );
-        return;
-      }
-      const actor = createActor(
-        canisterId,
-        async (file) => {
-          const bytes = await file.getBytes();
-          return new Uint8Array(bytes.buffer as ArrayBuffer);
-        },
-        async (bytes) => {
-          const { ExternalBlob } = await import("./backend");
-          return ExternalBlob.fromBytes(
-            new Uint8Array(bytes.buffer as ArrayBuffer),
+
+    function resolveCanisterId(): string {
+      // Pattern 1: direct window property
+      const w = window as unknown as Record<string, unknown>;
+      const p1 = w.CANISTER_ID_BACKEND as string | undefined;
+      if (p1) return p1;
+
+      // Pattern 2: underscore-prefixed window property
+      const p2 = w.__CANISTER_ID_BACKEND as string | undefined;
+      if (p2) return p2;
+
+      // Pattern 3: Vite env without prefix
+      const envRaw = (
+        import.meta as unknown as Record<string, Record<string, string>>
+      ).env;
+      const p3 = envRaw?.CANISTER_ID_BACKEND;
+      if (p3) return p3;
+
+      // Pattern 4: Vite env with VITE_ prefix
+      const p4 = envRaw?.VITE_CANISTER_ID_BACKEND;
+      if (p4) return p4;
+
+      // Pattern 5: platform __ENV__ object
+      const envObj = w.__ENV__ as Record<string, string> | undefined;
+      const p5 = envObj?.CANISTER_ID_BACKEND;
+      if (p5) return p5;
+
+      // Pattern 6: <meta name="canister-id-backend"> tag
+      try {
+        const metaVal = document
+          .querySelector('meta[name="canister-id-backend"]')
+          ?.getAttribute("content");
+        if (metaVal) return metaVal;
+      } catch {}
+
+      // Pattern 7: scan all <script> tags for JSON containing CANISTER_ID_BACKEND
+      try {
+        const scripts = document.querySelectorAll("script");
+        for (const script of Array.from(scripts)) {
+          const text = script.textContent ?? "";
+          if (!text.includes("CANISTER_ID_BACKEND")) continue;
+          // Try to find it as window.CANISTER_ID_BACKEND = "..."
+          const m1 = text.match(
+            /CANISTER_ID_BACKEND\s*[=:]\s*["']([a-z0-9-]+)["']/,
           );
-        },
-      );
-      if (!actor) {
-        console.error(
-          "[sync] createActor() returned null/undefined — setCanisterActor not called. " +
-            "Verify the canister ID is correct and the backend is reachable.",
+          if (m1?.[1]) return m1[1];
+          // Try JSON object: { "CANISTER_ID_BACKEND": "..." }
+          try {
+            const jsonMatch = text.match(/\{[^}]*CANISTER_ID_BACKEND[^}]*\}/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]) as Record<string, string>;
+              if (parsed.CANISTER_ID_BACKEND) return parsed.CANISTER_ID_BACKEND;
+            }
+          } catch {}
+        }
+      } catch {}
+
+      // Pattern 8: __CANISTER_ID_BACKEND as a global var set by build injection
+      try {
+        // Some Caffeine builds inject: var __CANISTER_ID_BACKEND = "..."
+        const g8 = (globalThis as unknown as Record<string, unknown>)
+          .__CANISTER_ID_BACKEND as string | undefined;
+        if (g8) return g8;
+      } catch {}
+
+      return "";
+    }
+
+    function tryCreateActor() {
+      if (canisterActorRef.current) return true; // already created
+      const canisterId = resolveCanisterId();
+      if (!canisterId) return false;
+
+      try {
+        const actor = createActor(
+          canisterId,
+          async (file) => {
+            const bytes = await file.getBytes();
+            return new Uint8Array(bytes.buffer as ArrayBuffer);
+          },
+          async (bytes) => {
+            const { ExternalBlob } = await import("./backend");
+            return ExternalBlob.fromBytes(
+              new Uint8Array(bytes.buffer as ArrayBuffer),
+            );
+          },
         );
+        if (!actor) {
+          console.error(
+            "[sync] createActor() returned null/undefined — setCanisterActor not called. " +
+              "Verify the canister ID is correct and the backend is reachable.",
+          );
+          return false;
+        }
+        canisterActorRef.current = actor;
+        setCanisterActorState(actor);
+        setCanisterActor(actor);
+        setBackendDisconnected(false);
+        console.info(
+          `[sync] Canister actor initialized with ID: ${canisterId}`,
+        );
+        // Expose debug helper on window for troubleshooting
+        (window as unknown as Record<string, unknown>).__debugSync = () =>
+          console.log("canisterId:", canisterId, "actor:", getCanisterActor());
+        return true;
+      } catch (err) {
+        console.error("[sync] Could not create canister actor:", err);
+        return false;
+      }
+    }
+
+    if (tryCreateActor()) {
+      // Actor created on first try — fire canisterReady event
+      window.dispatchEvent(new CustomEvent("canisterReady"));
+      return;
+    }
+
+    // canisterId was empty on first attempt — log once, then keep retrying
+    // tryCreateActor re-resolves the canister ID on every call so a late injection
+    // (e.g., a <script> tag appended by the platform after DOMContentLoaded) is picked up.
+    console.warn(
+      "[sync] CANISTER_ID_BACKEND not yet available — will retry every 5s (up to 40 attempts). " +
+        "All sync attempts will be deferred until the ID is resolved.",
+    );
+    setBackendDisconnected(true);
+
+    let retries = 0;
+    const MAX_RETRIES = 40; // 40 × 5s = 3 min 20s window for late injection
+    const retryInterval = setInterval(() => {
+      retries++;
+      if (tryCreateActor()) {
+        clearInterval(retryInterval);
+        // Fire canisterReady so other parts of the app can react
+        window.dispatchEvent(new CustomEvent("canisterReady"));
         return;
       }
-      canisterActorRef.current = actor;
-      // Set in state so useMigration receives the live actor reference.
-      // This triggers a re-render and starts the sync/polling loop.
-      setCanisterActorState(actor);
-      setCanisterActor(actor);
-      console.info("[sync] Canister actor created and ready.");
-    } catch (err) {
-      console.error("[sync] Could not create canister actor:", err);
-    }
+      if (retries >= MAX_RETRIES) {
+        clearInterval(retryInterval);
+        console.error(
+          `[sync] CANISTER_ID_BACKEND could not be resolved after ${MAX_RETRIES} attempts. Sync will remain disabled. Tried: window.CANISTER_ID_BACKEND, window.__CANISTER_ID_BACKEND, import.meta.env.CANISTER_ID_BACKEND, import.meta.env.VITE_CANISTER_ID_BACKEND, window.__ENV__.CANISTER_ID_BACKEND, <meta name="canister-id-backend">, <script> tag scan, globalThis.__CANISTER_ID_BACKEND`,
+        );
+      }
+    }, 5_000);
+
+    return () => clearInterval(retryInterval);
   }, []);
 
   // invalidateAll: called by useMigration after every successful poll cycle
@@ -1624,6 +1728,13 @@ function AppInner() {
     return "";
   }, [currentPatient]);
 
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  // Auto-restore banner visibility if connection drops again after dismissal
+  useEffect(() => {
+    if (!backendDisconnected) setBannerDismissed(false);
+  }, [backendDisconnected]);
+
   const isSerialDisplay =
     typeof window !== "undefined" &&
     window.location.pathname === "/serial-display";
@@ -1901,6 +2012,8 @@ function AppInner() {
     );
   }
 
+  const showBackendBanner = backendDisconnected && !bannerDismissed;
+
   if (!currentDoctor) {
     return (
       <>
@@ -2060,7 +2173,35 @@ function AppInner() {
 
   return (
     <>
-      <RouterProvider router={router} />
+      {showBackendBanner && (
+        <div
+          className="fixed top-0 left-0 right-0 z-[9999] flex items-center justify-between gap-3 px-4 py-2.5 text-white text-sm font-medium shadow-lg"
+          style={{
+            background: "linear-gradient(90deg, #b91c1c 0%, #ea580c 100%)",
+          }}
+          data-ocid="sync.backend_disconnected_banner"
+        >
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-white/60 animate-pulse" />
+            <span>
+              Backend not connected — data will not sync between devices.
+              Retrying...
+            </span>
+          </div>
+          <button
+            type="button"
+            aria-label="Dismiss banner"
+            onClick={() => setBannerDismissed(true)}
+            className="ml-auto shrink-0 rounded p-0.5 hover:bg-white/20 transition-colors"
+            data-ocid="sync.backend_banner.close_button"
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
+        </div>
+      )}
+      <div style={showBackendBanner ? { paddingTop: "40px" } : undefined}>
+        <RouterProvider router={router} />
+      </div>
       <Toaster position="top-right" richColors />
       {showWarning && (
         <InactivityWarningOverlay
