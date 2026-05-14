@@ -1,6 +1,21 @@
 {
   "version": 2,
-  "installCommand": "pnpm install --prefix src/frontend",
-  "buildCommand": "pnpm --prefix src/frontend build",
-  "outputDirectory": "src/frontend/dist"
+  "builds": [
+    {
+      "src": "src/frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/.*",
+      "dest": "/index.html"
+    }
+  ]
 }
