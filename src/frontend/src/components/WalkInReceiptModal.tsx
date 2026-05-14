@@ -4,15 +4,17 @@
  * Receipt has a prominent clinic header.
  */
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Receipt, RotateCcw, X } from "lucide-react";
+import { FileDown, MessageCircle, Receipt, RotateCcw, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import type { MoneyReceiptData, PaymentMethod, RefundRecord } from "../types";
 import {
+  DownloadOptionsDialog,
   InvoiceStateBadge,
   RefundDialog,
   saveReceiptToStore,
   sendReceiptWhatsApp,
+  triggerReceiptPrint,
 } from "./MoneyReceipt";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -628,9 +630,9 @@ export default function WalkInReceiptModal({
   const [receipt, setReceipt] = useState(initialReceipt);
   const printRef = useRef<HTMLDivElement>(null!);
   const [showRefund, setShowRefund] = useState(false);
-  const [paperSize, setPaperSize] = useState<"A4" | "A5" | "A3">("A4");
+  const [showDownloadOptions, setShowDownloadOptions] = useState(false);
 
-  function handlePrint() {
+  function handlePrint(paperSize: "A4" | "A5" | "A3" = "A4") {
     const old = document.getElementById("_wlk_ps");
     if (old) old.remove();
     const s = document.createElement("style");
@@ -641,6 +643,36 @@ export default function WalkInReceiptModal({
     setTimeout(() => {
       document.getElementById("_wlk_ps")?.remove();
     }, 2000);
+  }
+
+  function handleDownload(withHeader: boolean, paperSize: "A4" | "A5" | "A3") {
+    const headerHtml = `<div style="background:linear-gradient(135deg,#1d4ed8 0%,#7c3aed 100%);padding:20px 24px 16px;margin-bottom:0">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div style="width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:white;flex-shrink:0">A</div>
+        <div>
+          <div style="color:white;font-weight:900;font-size:18px;letter-spacing:-0.02em;line-height:1.2">Dr. Arman Kabir's Care</div>
+          <div style="color:rgba(255,255,255,0.75);font-size:11px">Patient Management &amp; Clinical Portal</div>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="color:rgba(255,255,255,0.8);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em">Investigation Receipt / তদন্ত রসিদ</div>
+          <div style="color:white;font-weight:900;font-size:18px;font-family:monospace">${receipt.receiptNumber}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="color:rgba(255,255,255,0.8);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em">Date</div>
+          <div style="color:white;font-weight:700;font-size:13px">${new Date(receipt.investigationDate ?? receipt.date).toLocaleDateString("en-BD", { year: "numeric", month: "long", day: "numeric" })}</div>
+        </div>
+      </div>
+    </div>`;
+    const bodyHtml = printRef.current ? printRef.current.innerHTML : "";
+    triggerReceiptPrint({
+      bodyHtml,
+      headerHtml,
+      withHeader,
+      paperSize,
+      filename: `receipt-${receipt.receiptNumber}`,
+    });
   }
 
   function handleRefund(refund: RefundRecord) {
@@ -680,6 +712,17 @@ export default function WalkInReceiptModal({
           maxAmount={receipt.amountPaid ?? totalAmount}
           onConfirm={handleRefund}
           onCancel={() => setShowRefund(false)}
+        />
+      )}
+
+      {showDownloadOptions && (
+        <DownloadOptionsDialog
+          receiptNumber={receipt.receiptNumber}
+          onClose={() => setShowDownloadOptions(false)}
+          onDownload={(withHeader, paperSize) => {
+            setShowDownloadOptions(false);
+            handleDownload(withHeader, paperSize);
+          }}
         />
       )}
 
@@ -754,7 +797,7 @@ export default function WalkInReceiptModal({
 
           {/* Actions footer */}
           <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-border walkin-no-print">
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button
                 variant="outline"
                 onClick={onClose}
@@ -785,29 +828,22 @@ export default function WalkInReceiptModal({
                   </Button>
                 )}
             </div>
-            <div className="no-print space-y-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium text-gray-600">
-                  Paper Size:
-                </span>
-                {(["A4", "A5", "A3"] as const).map((sz) => (
-                  <button
-                    key={sz}
-                    type="button"
-                    onClick={() => setPaperSize(sz)}
-                    className={`px-3 py-1 text-sm rounded border transition-colors ${paperSize === sz ? "bg-teal-600 text-white border-teal-600" : "bg-white text-gray-700 border-gray-300 hover:border-teal-500"}`}
-                  >
-                    {sz}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={handlePrint}
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 rounded-lg font-semibold"
+            <div className="flex gap-2 no-print">
+              <Button
+                variant="outline"
+                className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50"
+                onClick={() => handlePrint()}
+                data-ocid="walkin_receipt.print_button"
               >
-                Print / Download Receipt
-              </button>
+                <Receipt className="w-4 h-4" /> Print
+              </Button>
+              <Button
+                className="gap-1.5 bg-teal-600 hover:bg-teal-700 text-white"
+                onClick={() => setShowDownloadOptions(true)}
+                data-ocid="walkin_receipt.download_button"
+              >
+                <FileDown className="w-4 h-4" /> Download
+              </Button>
             </div>
           </div>
         </div>

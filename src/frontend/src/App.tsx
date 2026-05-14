@@ -1251,37 +1251,47 @@ function AppInner() {
     if (canisterActorRef.current) return;
 
     function resolveCanisterId(): string {
-      // Pattern 1: direct window property
       const w = window as unknown as Record<string, unknown>;
-      const p1 = w.CANISTER_ID_BACKEND as string | undefined;
-      if (p1) return p1;
-
-      // Pattern 2: underscore-prefixed window property
-      const p2 = w.__CANISTER_ID_BACKEND as string | undefined;
-      if (p2) return p2;
-
-      // Pattern 3: Vite env without prefix
       const envRaw = (
         import.meta as unknown as Record<string, Record<string, string>>
       ).env;
-      const p3 = envRaw?.CANISTER_ID_BACKEND;
-      if (p3) return p3;
 
-      // Pattern 4: Vite env with VITE_ prefix
-      const p4 = envRaw?.VITE_CANISTER_ID_BACKEND;
-      if (p4) return p4;
+      // Pattern 0: build-time injected by vite.config.js define block
+      // (catches both Vercel VITE_ prefix and Caffeine platform prefix)
+      const p0 = w.__RESOLVED_CANISTER_ID_BACKEND as string | undefined;
+      if (p0 && p0 !== "undefined" && p0 !== "") return p0;
+
+      // Pattern 1: VITE_ prefix — required for Vercel custom deployments
+      // (Vercel only injects vars prefixed with VITE_ into the browser bundle)
+      const p1v = envRaw?.VITE_CANISTER_ID_BACKEND;
+      if (p1v && p1v !== "undefined" && p1v !== "") return p1v;
+
+      // Pattern 2: plain CANISTER_ prefix — Caffeine platform injects this
+      const p1c = envRaw?.CANISTER_ID_BACKEND;
+      if (p1c && p1c !== "undefined" && p1c !== "") return p1c;
+
+      // Pattern 3: direct window property
+      const p3 = w.CANISTER_ID_BACKEND as string | undefined;
+      if (p3 && p3 !== "undefined" && p3 !== "") return p3;
+
+      // Pattern 4: underscore-prefixed window property
+      const p4 = w.__CANISTER_ID_BACKEND as string | undefined;
+      if (p4 && p4 !== "undefined" && p4 !== "") return p4;
 
       // Pattern 5: platform __ENV__ object
       const envObj = w.__ENV__ as Record<string, string> | undefined;
       const p5 = envObj?.CANISTER_ID_BACKEND;
-      if (p5) return p5;
+      if (p5 && p5 !== "undefined" && p5 !== "") return p5;
+      const p5v = envObj?.VITE_CANISTER_ID_BACKEND;
+      if (p5v && p5v !== "undefined" && p5v !== "") return p5v;
 
       // Pattern 6: <meta name="canister-id-backend"> tag
       try {
         const metaVal = document
           .querySelector('meta[name="canister-id-backend"]')
           ?.getAttribute("content");
-        if (metaVal) return metaVal;
+        if (metaVal && metaVal !== "undefined" && metaVal !== "")
+          return metaVal;
       } catch {}
 
       // Pattern 7: scan all <script> tags for JSON containing CANISTER_ID_BACKEND
@@ -1292,15 +1302,19 @@ function AppInner() {
           if (!text.includes("CANISTER_ID_BACKEND")) continue;
           // Try to find it as window.CANISTER_ID_BACKEND = "..."
           const m1 = text.match(
-            /CANISTER_ID_BACKEND\s*[=:]\s*["']([a-z0-9-]+)["']/,
+            /CANISTER_ID_BACKEND\s*[=:]\s*["']([a-z0-9-]{5,})["']/,
           );
-          if (m1?.[1]) return m1[1];
+          if (m1?.[1] && m1[1] !== "undefined") return m1[1];
           // Try JSON object: { "CANISTER_ID_BACKEND": "..." }
           try {
             const jsonMatch = text.match(/\{[^}]*CANISTER_ID_BACKEND[^}]*\}/);
             if (jsonMatch) {
               const parsed = JSON.parse(jsonMatch[0]) as Record<string, string>;
-              if (parsed.CANISTER_ID_BACKEND) return parsed.CANISTER_ID_BACKEND;
+              if (
+                parsed.CANISTER_ID_BACKEND &&
+                parsed.CANISTER_ID_BACKEND !== "undefined"
+              )
+                return parsed.CANISTER_ID_BACKEND;
             }
           } catch {}
         }
@@ -1308,10 +1322,9 @@ function AppInner() {
 
       // Pattern 8: __CANISTER_ID_BACKEND as a global var set by build injection
       try {
-        // Some Caffeine builds inject: var __CANISTER_ID_BACKEND = "..."
         const g8 = (globalThis as unknown as Record<string, unknown>)
           .__CANISTER_ID_BACKEND as string | undefined;
-        if (g8) return g8;
+        if (g8 && g8 !== "undefined" && g8 !== "") return g8;
       } catch {}
 
       return "";
@@ -1366,12 +1379,13 @@ function AppInner() {
       return;
     }
 
-    // canisterId was empty on first attempt — log once, then keep retrying
+    // canisterId was empty on first attempt — log once, then keep retrying.
     // tryCreateActor re-resolves the canister ID on every call so a late injection
     // (e.g., a <script> tag appended by the platform after DOMContentLoaded) is picked up.
     console.warn(
-      "[sync] CANISTER_ID_BACKEND not yet available — will retry every 5s (up to 40 attempts). " +
-        "All sync attempts will be deferred until the ID is resolved.",
+      "[sync] CANISTER_ID_BACKEND not yet available — will retry every 5s (up to 40 attempts).\n" +
+        "If this is a Vercel deployment: add VITE_CANISTER_ID_BACKEND to your Vercel project\n" +
+        "Environment Variables and redeploy. The value is the canister ID from the Caffeine platform.",
     );
     setBackendDisconnected(true);
 
@@ -1381,14 +1395,13 @@ function AppInner() {
       retries++;
       if (tryCreateActor()) {
         clearInterval(retryInterval);
-        // Fire canisterReady so other parts of the app can react
         window.dispatchEvent(new CustomEvent("canisterReady"));
         return;
       }
       if (retries >= MAX_RETRIES) {
         clearInterval(retryInterval);
         console.error(
-          `[sync] CANISTER_ID_BACKEND could not be resolved after ${MAX_RETRIES} attempts. Sync will remain disabled. Tried: window.CANISTER_ID_BACKEND, window.__CANISTER_ID_BACKEND, import.meta.env.CANISTER_ID_BACKEND, import.meta.env.VITE_CANISTER_ID_BACKEND, window.__ENV__.CANISTER_ID_BACKEND, <meta name="canister-id-backend">, <script> tag scan, globalThis.__CANISTER_ID_BACKEND`,
+          `[sync] CANISTER_ID_BACKEND could not be resolved after ${MAX_RETRIES} attempts. Sync is disabled.\nFIX FOR VERCEL: Set VITE_CANISTER_ID_BACKEND in Vercel project Environment Variables.\nFIX FOR CAFFEINE: Ensure the backend canister is deployed and the platform has injected CANISTER_ID_BACKEND.\nTried: __RESOLVED_CANISTER_ID_BACKEND, VITE_CANISTER_ID_BACKEND (env), CANISTER_ID_BACKEND (env), window.CANISTER_ID_BACKEND, window.__CANISTER_ID_BACKEND, __ENV__.CANISTER_ID_BACKEND, <meta name="canister-id-backend">, <script> tag scan, globalThis.__CANISTER_ID_BACKEND`,
         );
       }
     }, 5_000);
@@ -1733,6 +1746,18 @@ function AppInner() {
   // Auto-restore banner visibility if connection drops again after dismissal
   useEffect(() => {
     if (!backendDisconnected) setBannerDismissed(false);
+  }, [backendDisconnected]);
+
+  // Show Vercel-specific guidance after 10 retries (50s) if canister ID is still not resolved
+  const [showVercelHint, setShowVercelHint] = useState(false);
+  useEffect(() => {
+    if (!backendDisconnected) {
+      setShowVercelHint(false);
+      return;
+    }
+    // After 50s of retrying with no actor, show the Vercel env var instruction
+    const t = setTimeout(() => setShowVercelHint(true), 50_000);
+    return () => clearTimeout(t);
   }, [backendDisconnected]);
 
   const isSerialDisplay =
@@ -2175,28 +2200,60 @@ function AppInner() {
     <>
       {showBackendBanner && (
         <div
-          className="fixed top-0 left-0 right-0 z-[9999] flex items-center justify-between gap-3 px-4 py-2.5 text-white text-sm font-medium shadow-lg"
-          style={{
-            background: "linear-gradient(90deg, #b91c1c 0%, #ea580c 100%)",
-          }}
+          className="fixed top-0 left-0 right-0 z-[9999] shadow-lg"
           data-ocid="sync.backend_disconnected_banner"
         >
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-white/60 animate-pulse" />
-            <span>
-              Backend not connected — data will not sync between devices.
-              Retrying...
-            </span>
-          </div>
-          <button
-            type="button"
-            aria-label="Dismiss banner"
-            onClick={() => setBannerDismissed(true)}
-            className="ml-auto shrink-0 rounded p-0.5 hover:bg-white/20 transition-colors"
-            data-ocid="sync.backend_banner.close_button"
+          {/* Primary red banner */}
+          <div
+            className="flex items-center justify-between gap-3 px-4 py-2.5 text-white text-sm font-medium"
+            style={{
+              background: "linear-gradient(90deg, #b91c1c 0%, #ea580c 100%)",
+            }}
           >
-            <X size={16} aria-hidden="true" />
-          </button>
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-white/60 animate-pulse" />
+              <span>
+                Backend not connected — data will not sync between devices.
+                Retrying...
+              </span>
+            </div>
+            <button
+              type="button"
+              aria-label="Dismiss banner"
+              onClick={() => setBannerDismissed(true)}
+              className="ml-auto shrink-0 rounded p-0.5 hover:bg-white/20 transition-colors"
+              data-ocid="sync.backend_banner.close_button"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+          {/* Vercel-specific hint shown after 50s of failed retries */}
+          {showVercelHint && (
+            <div
+              className="flex items-start gap-3 px-4 py-2.5 text-amber-900 text-xs font-medium border-b border-amber-300"
+              style={{ background: "#fef3c7" }}
+              data-ocid="sync.vercel_hint_banner"
+            >
+              <span className="text-base shrink-0">⚠️</span>
+              <span className="leading-snug">
+                <strong>Vercel deployment detected:</strong> Cloud sync is
+                unavailable because{" "}
+                <code className="bg-amber-200 px-1 rounded font-mono">
+                  VITE_CANISTER_ID_BACKEND
+                </code>{" "}
+                is not set. Go to your{" "}
+                <strong>
+                  Vercel project → Settings → Environment Variables
+                </strong>
+                , add{" "}
+                <code className="bg-amber-200 px-1 rounded font-mono">
+                  VITE_CANISTER_ID_BACKEND
+                </code>{" "}
+                with your canister ID value, then redeploy. Local data is safe
+                until then.
+              </span>
+            </div>
+          )}
         </div>
       )}
       <div style={showBackendBanner ? { paddingTop: "40px" } : undefined}>

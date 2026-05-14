@@ -24,6 +24,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Download,
+  FileDown,
   MessageCircle,
   Printer,
   RotateCcw,
@@ -95,6 +96,201 @@ export function generateReceiptNumber(): string {
 }
 
 // ── WhatsApp helper ────────────────────────────────────────────────────────────
+// ── Print-based PDF download helper ──────────────────────────────────────────
+
+export interface DownloadReceiptOptions {
+  /** HTML string of the receipt body (without header) */
+  bodyHtml: string;
+  /** Full clinic header HTML — included when withHeader=true */
+  headerHtml: string;
+  withHeader: boolean;
+  paperSize: "A4" | "A5" | "A3";
+  filename: string;
+}
+
+/**
+ * Opens a hidden iframe, injects the receipt HTML, and calls print().
+ * The browser's "Save as PDF" destination handles the actual PDF creation.
+ * This avoids html2canvas entirely and produces a properly scaled receipt.
+ */
+export function triggerReceiptPrint(opts: DownloadReceiptOptions) {
+  const { bodyHtml, headerHtml, withHeader, paperSize, filename } = opts;
+  const content = withHeader ? headerHtml + bodyHtml : bodyHtml;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${filename}</title><style>
+    @page { size: ${paperSize}; margin: 10mm; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { margin: 0; font-family: serif; background: white; }
+    table { border-collapse: collapse; }
+  </style></head><body>${content}</body></html>`;
+
+  // Use a hidden iframe so the rest of the app is not affected
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText =
+    "position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:0;opacity:0";
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument ?? iframe.contentWindow?.document;
+  if (!doc) {
+    document.body.removeChild(iframe);
+    return;
+  }
+  doc.open();
+  doc.write(html);
+  doc.close();
+  // Wait for images/fonts to load then print
+  iframe.contentWindow?.addEventListener("load", () => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } finally {
+      setTimeout(() => {
+        if (document.body.contains(iframe)) document.body.removeChild(iframe);
+      }, 3000);
+    }
+  });
+  // Fallback if load already fired
+  setTimeout(() => {
+    if (iframe.contentWindow && document.body.contains(iframe)) {
+      try {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch {}
+      setTimeout(() => {
+        if (document.body.contains(iframe)) document.body.removeChild(iframe);
+      }, 3000);
+    }
+  }, 600);
+}
+
+// ── Shared Download Options Dialog ───────────────────────────────────────────
+
+interface DownloadOptionsDialogProps {
+  receiptNumber: string;
+  onDownload: (withHeader: boolean, paperSize: "A4" | "A5" | "A3") => void;
+  onClose: () => void;
+}
+
+export function DownloadOptionsDialog({
+  receiptNumber,
+  onDownload,
+  onClose,
+}: DownloadOptionsDialogProps) {
+  const [withHeader, setWithHeader] = useState(true);
+  const [paperSize, setPaperSize] = useState<"A4" | "A5" | "A3">("A4");
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4"
+      data-ocid="download_options.dialog"
+    >
+      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="font-bold text-foreground flex items-center gap-2">
+              <FileDown className="w-4 h-4 text-teal-600" />
+              Download Receipt
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {receiptNumber}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground"
+            data-ocid="download_options.close_button"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Header option */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Receipt Header
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setWithHeader(true)}
+              className={`h-20 rounded-xl border-2 text-sm font-semibold transition-all flex flex-col items-center justify-center gap-1 ${
+                withHeader
+                  ? "border-teal-500 bg-teal-50 text-teal-700"
+                  : "border-border bg-background text-muted-foreground hover:border-teal-300"
+              }`}
+              data-ocid="download_options.with_header.toggle"
+            >
+              <span className="text-xl">🏥</span>
+              <span>With Header</span>
+              <span className="text-[10px] font-normal opacity-70">
+                Clinic branding
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setWithHeader(false)}
+              className={`h-20 rounded-xl border-2 text-sm font-semibold transition-all flex flex-col items-center justify-center gap-1 ${
+                !withHeader
+                  ? "border-teal-500 bg-teal-50 text-teal-700"
+                  : "border-border bg-background text-muted-foreground hover:border-teal-300"
+              }`}
+              data-ocid="download_options.without_header.toggle"
+            >
+              <span className="text-xl">📄</span>
+              <span>Without Header</span>
+              <span className="text-[10px] font-normal opacity-70">
+                Body only
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Paper size */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Paper Size
+          </p>
+          <div className="flex gap-2">
+            {(["A4", "A5", "A3"] as const).map((sz) => (
+              <button
+                key={sz}
+                type="button"
+                onClick={() => setPaperSize(sz)}
+                className={`flex-1 h-9 rounded-lg text-sm font-semibold border-2 transition-colors ${
+                  paperSize === sz
+                    ? "bg-teal-600 text-white border-teal-600"
+                    : "bg-background text-muted-foreground border-border hover:border-teal-400"
+                }`}
+                data-ocid={`download_options.paper_${sz.toLowerCase()}.toggle`}
+              >
+                {sz}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 h-10 rounded-lg border border-border text-sm font-semibold text-muted-foreground hover:bg-muted/40 transition-colors"
+            data-ocid="download_options.cancel_button"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onDownload(withHeader, paperSize)}
+            className="flex-2 flex-grow h-10 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
+            data-ocid="download_options.confirm_button"
+          >
+            <Download className="w-4 h-4" />
+            Download PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function sendReceiptWhatsApp(r: {
   patientName?: string;
@@ -426,8 +622,8 @@ export default function MoneyReceipt({
     };
   });
   const printRef = useRef<HTMLDivElement>(null);
-  const [saving, setSaving] = useState(false);
   const [showRefund, setShowRefund] = useState(false);
+  const [showDownloadOptions, setShowDownloadOptions] = useState(false);
   const [isPartial, setIsPartial] = useState(
     (initialData.amountPaid ?? 0) > 0 &&
       (initialData.amountPaid ?? 0) <
@@ -460,28 +656,8 @@ export default function MoneyReceipt({
     window.print();
   }
 
-  async function handleDownloadPDF() {
-    if (!printRef.current) return;
-    setSaving(true);
-    try {
-      const html2canvas = (await import("html2canvas")).default;
-      const canvas = await html2canvas(printRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-      });
-      const dataUrl = canvas.toDataURL("image/png");
-      const link = document.createElement("a");
-      link.href = dataUrl;
-      link.download = `receipt-${data.receiptNumber}.png`;
-      link.click();
-      handleSave();
-      toast.success("Receipt downloaded");
-    } catch {
-      toast.error("Could not generate download. Please use Print instead.");
-    } finally {
-      setSaving(false);
-    }
+  function handleDownloadPDF() {
+    setShowDownloadOptions(true);
   }
 
   function handleRefund(refund: RefundRecord) {
@@ -528,6 +704,37 @@ export default function MoneyReceipt({
           maxAmount={isPartial ? amountPaid : totalAmount}
           onConfirm={handleRefund}
           onCancel={() => setShowRefund(false)}
+        />
+      )}
+
+      {showDownloadOptions && (
+        <DownloadOptionsDialog
+          receiptNumber={data.receiptNumber}
+          onClose={() => setShowDownloadOptions(false)}
+          onDownload={(withHeader, paperSize) => {
+            setShowDownloadOptions(false);
+            // Build header HTML
+            const headerHtml = `<div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #1f2937">
+              <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px">
+                <div style="width:40px;height:40px;background:#1d4ed8;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:18px;flex-shrink:0">A</div>
+                <div>
+                  <div style="font-weight:900;font-size:20px;color:#111827">Dr. Arman Kabir's Care</div>
+                  <div style="font-size:12px;color:#6b7280">Patient Management &amp; Clinical Portal</div>
+                </div>
+              </div>
+              <div style="font-size:12px;color:#9ca3af">University Dental College &amp; Hospital, Moghbazar, Dhaka</div>
+            </div>`;
+            const el = printRef.current;
+            const bodyHtml = el ? el.innerHTML : "";
+            triggerReceiptPrint({
+              bodyHtml,
+              headerHtml,
+              withHeader,
+              paperSize,
+              filename: `receipt-${data.receiptNumber}`,
+            });
+            handleSave();
+          }}
         />
       )}
 
@@ -855,13 +1062,13 @@ export default function MoneyReceipt({
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50"
+                className="gap-1.5 border-teal-300 text-teal-700 hover:bg-teal-50"
                 onClick={handleDownloadPDF}
-                disabled={saving}
+                disabled={false}
                 data-ocid="receipt.download_button"
               >
-                <Download className="w-4 h-4" />
-                {saving ? "Generating…" : "Download"}
+                <FileDown className="w-4 h-4" />
+                Download
               </Button>
               <Button
                 className="gap-1.5 bg-primary hover:bg-primary/90"
