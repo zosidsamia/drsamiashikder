@@ -7239,10 +7239,18 @@ export function createActor(canisterId: string, _uploadFile: (file: ExternalBlob
     if (options.agent && options.agentOptions) {
         console.warn("Detected both agent and agentOptions passed to createActor. Ignoring agentOptions and proceeding with the provided agent.");
     }
-    const actor = Actor.createActor<_SERVICE>(idlFactory, {
-        agent,
-        canisterId: canisterId,
-        ...options.actorOptions
-    });
-    return new Backend(actor, _uploadFile, _downloadFile, options.processError);
-}
+    import { Actor, HttpAgent } from "@dfinity/agent";
+
+const host =
+  import.meta.env.VITE_DFX_NETWORK === "local"
+    ? "http://127.0.0.1:4943"
+    : "https://icp-api.io";
+
+// ALWAYS create a fresh agent (don’t reuse unknown agent)
+const agent = new HttpAgent({ host });
+
+const actor = Actor.createActor<_SERVICE>(idlFactory, {
+  agent,
+  canisterId,
+  ...options.actorOptions,
+});
