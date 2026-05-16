@@ -294,6 +294,7 @@ actor {
 
   func logAction(caller : Principal, action : Text, details : Text, success : Bool) {
     if (auditLogIdCounter > MAX_AUDIT_LOGS) {
+      // Rotate: keep only recent logs
       let allLogs = auditLogs.toArray();
       let recentLogs = Array.drop<(Nat, AuditLog)>(allLogs, MAX_AUDIT_LOGS / 2);
       auditLogs.clear();
@@ -552,38 +553,6 @@ actor {
 
     patients.add(id, updatedPatient);
     logAction(caller, "updatePatient", "Updated patient ID: " # Nat.toText(id), true);
-    #ok(updatedPatient);
-  };
-
-  public shared ({ caller }) func assignConsultant(
-    patientId : Nat,
-    consultantEmail : Text,
-    consultantName : Text
-  ) : async Result<Patient, ApiError> {
-    switch (checkRateLimit(caller)) {
-      case (#err(e)) { return #err(e) };
-      case (#ok()) {};
-    };
-
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      logAction(caller, "assignConsultant", "Unauthorized", false);
-      return #err(#unauthorized("Only users can assign consultants"));
-    };
-
-    let existingPatient = switch (patients.get(patientId)) {
-      case (null) { return #err(#notFound("Patient not found")) };
-      case (?patient) { patient };
-    };
-
-    let updatedPatient : Patient = {
-      existingPatient with
-      consultantEmail = ?consultantEmail;
-      consultantName = ?consultantName;
-      updatedAt = Time.now();
-    };
-
-    patients.add(patientId, updatedPatient);
-    logAction(caller, "assignConsultant", "Assigned consultant to patient ID: " # Nat.toText(patientId), true);
     #ok(updatedPatient);
   };
 
