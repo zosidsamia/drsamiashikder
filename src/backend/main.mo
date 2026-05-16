@@ -5,25 +5,10 @@ import Runtime "mo:core/Runtime";
 import Nat "mo:core/Nat";
 import Principal "mo:core/Principal";
 
-
-import MixinAuthorization "authorization/MixinAuthorization";
-import AccessControl "authorization/access-control";
+import MixinAuthorization "authorization/MixinAuthorization/lib";
+import AccessControl "authorization/access-control/lib";
 import ClinicalDataEngineLib "lib/clinical-data-engine";
 import ClinicalDataEngineMixin "mixins/clinical-data-engine-api";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 actor {
   ///////////////////////////////
