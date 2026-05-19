@@ -85,54 +85,35 @@ actor {
     updatedAt : Time.Time;
   };
 
-  public type UserProfile = {
-    name : Text;
-  };
-
   ///////////////////////////////
-  // SYNC SYSTEM (ICP → NHOST)
+  // SYNC ENGINE TYPES
   ///////////////////////////////
 
   public type SyncAction = {
     id : Nat;
-    entity : Text;   // "patient", "visit", "prescription"
-    action : Text;   // create | update | delete
-    payload : Text;  // minimal JSON or string
+    entityType : Text;
+    entityId : Nat;
+    action : Text;
+    payload : ?Text;
     createdAt : Time.Time;
-  };
-
-  let syncQueue = Map.empty<Nat, SyncAction>();
-  var syncCounter : Nat = 1;
-
-  func pushSync(entity : Text, action : Text, payload : Text) {
-    let item : SyncAction = {
-      id = syncCounter;
-      entity;
-      action;
-      payload;
-      createdAt = Time.now();
-    };
-
-    syncQueue.add(syncCounter, item);
-    syncCounter += 1;
-  };
-
-  public query func getSyncQueue() : async [SyncAction] {
-    syncQueue.values().toArray();
+    synced : Bool;
+    retryCount : Nat;
   };
 
   ///////////////////////////////
-  // DATA STORES
+  // STORAGE
   ///////////////////////////////
 
   let patients = Map.empty<Nat, Patient>();
   let visits = Map.empty<Nat, Visit>();
   let prescriptions = Map.empty<Nat, Prescription>();
-  let userProfiles = Map.empty<Principal, UserProfile>();
 
-  var patientIdCounter = 1;
-  var visitIdCounter = 1;
-  var prescriptionIdCounter = 1;
+  let syncQueue = Map.empty<Nat, SyncAction>();
+
+  var patientIdCounter : Nat = 1;
+  var visitIdCounter : Nat = 1;
+  var prescriptionIdCounter : Nat = 1;
+  var syncIdCounter : Nat = 1;
 
   ///////////////////////////////
   // AUTH
@@ -141,11 +122,8 @@ actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
-  let clinicalEngineState = ClinicalDataEngineLib.initState();
-  include ClinicalDataEngineMixin(clinicalEngineState, accessControlState);
-
   ///////////////////////////////
-  // PATIENT FUNCTIONS
+  // CORE PATIENT LOGIC
   ///////////////////////////////
 
   public shared ({ caller }) func createPatient(
@@ -166,10 +144,6 @@ actor {
     consultantEmail : ?Text,
     consultantName : ?Text
   ) : async Patient {
-
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized");
-    };
 
     let patient : Patient = {
       id = patientIdCounter;
@@ -196,85 +170,132 @@ actor {
     patients.add(patientIdCounter, patient);
     patientIdCounter += 1;
 
-    // 🔥 SYNC EVENT
-    pushSync("patient", "create", Nat.toText(patient.id));
+    // =========================
+    // SYNC QUEUE (IMPORTANT)
+    // =========================
+    syncQueue.add(syncIdCounter, {
+      id = syncIdCounter;
+      entityType = "patient";
+      entityId = patient.id;
+      action = "create";
+      payload = ?"";
+      createdAt = Time.now();
+      synced = false;
+      retryCount = 0;
+    });
 
-    patient;
+    syncIdCounter += 1;
+
+    return patient;
   };
 
-  public shared ({ caller }) func updatePatient(
-    id : Nat,
-    fullName : Text,
-    nameBn : ?Text,
-    dateOfBirth : ?Time.Time,
-    gender : Gender,
-    phone : ?Text,
-    email : ?Text,
-    address : ?Text,
-    bloodGroup : ?Text,
-    weight : ?Float,
-    height : ?Float,
-    allergies : [Text],
-    chronicConditions : [Text],
-    pastSurgicalHistory : ?Text,
-    patientType : PatientType,
-    consultantEmail : ?Text,
-    consultantName : ?Text
-  ) : async Patient {
-
-    let existing = switch (patients.get(id)) {
-      case (?p) p;
-      case null Runtime.trap("Not found");
-    };
-
-    let updated : Patient = {
-      id;
-      fullName;
-      nameBn;
-      dateOfBirth;
-      gender;
-      phone;
-      email;
-      address;
-      bloodGroup;
-      weight;
-      height;
-      allergies;
-      chronicConditions;
-      pastSurgicalHistory;
-      patientType;
-      createdAt = existing.createdAt;
-      updatedAt = Time.now();
-      consultantEmail;
-      consultantName;
-    };
-
-    patients.add(id, updated);
-
-    // 🔥 SYNC EVENT
-    pushSync("patient", "update", Nat.toText(id));
-
-    updated;
+  public query func getPatient(id : Nat) : async ?Patient {
+    patients.get(id);
   };
-
-  public shared ({ caller }) func deletePatient(id : Nat) : async () {
-
-    patients.remove(id);
-
-    // 🔥 SYNC EVENT
-    pushSync("patient", "delete", Nat.toText(id));
-  };
-
-  ///////////////////////////////
-  // SYNC ACCESS
-  ///////////////////////////////
 
   public query func getAllPatients() : async [Patient] {
     patients.values().toArray();
   };
 
-  public query func getSync() : async [SyncAction] {
+  ///////////////////////////////
+  // VISITS
+  ///////////////////////////////
+
+  public shared func createVisit(
+    patientId : Nat,
+    visitDate : Time.Time,
+    chiefComplaint : Text,
+    historyOfPresentIllness : ?Text,
+    vitalSigns : VitalSigns,
+    physicalExamination : ?Text,
+    diagnosis : ?Text,
+    notes : ?Text,
+    visitType : VisitType
+  ) : async Visit {
+
+    let visit : Visit = {
+      id = visitIdCounter;
+      patientId;
+      visitDate;
+      chiefComplaint;
+      historyOfPresentIllness;
+      vitalSigns;
+      physicalExamination;
+      diagnosis;
+      notes;
+      visitType;
+      createdAt = Time.now();
+      updatedAt = Time.now();
+    };
+
+    visits.add(visitIdCounter, visit);
+    visitIdCounter += 1;
+
+    return visit;
+  };
+
+  public query func getAllVisits() : async [Visit] {
+    visits.values().toArray();
+  };
+
+  ///////////////////////////////
+  // PRESCRIPTIONS
+  ///////////////////////////////
+
+  public shared func createPrescription(
+    patientId : Nat,
+    visitId : ?Nat,
+    prescriptionDate : Time.Time,
+    diagnosis : ?Text,
+    medications : [Medication],
+    notes : ?Text
+  ) : async Prescription {
+
+    let p : Prescription = {
+      id = prescriptionIdCounter;
+      patientId;
+      visitId;
+      prescriptionDate;
+      diagnosis;
+      medications;
+      notes;
+      createdAt = Time.now();
+      updatedAt = Time.now();
+    };
+
+    prescriptions.add(prescriptionIdCounter, p);
+    prescriptionIdCounter += 1;
+
+    return p;
+  };
+
+  public query func getAllPrescriptions() : async [Prescription] {
+    prescriptions.values().toArray();
+  };
+
+  ///////////////////////////////
+  // SYNC ENGINE API
+  ///////////////////////////////
+
+  public query func getSyncQueue() : async [SyncAction] {
     syncQueue.values().toArray();
   };
 
-};
+  public shared func markSynced(id : Nat) : async () {
+    switch (syncQueue.get(id)) {
+      case (?item) {
+        syncQueue.add(id, {
+          item with synced = true;
+        });
+      };
+      case null {};
+    };
+  };
+
+  public query func getPendingSync() : async [SyncAction] {
+    syncQueue.values()
+    .toArray()
+    .filter(func(x) { x.synced == false });
+  };
+
+}
