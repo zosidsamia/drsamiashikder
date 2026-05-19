@@ -17,6 +17,7 @@
     "sharp": "^0.34.4"
   },
   "dependencies": {
-    "@caffeineai/core-infrastructure": "^0.3.0"
+    "@caffeineai/core-infrastructure": "^0.3.0",
+    "@nhost/nhost-js": "^4.7.1"
   }
 }
