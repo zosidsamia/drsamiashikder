@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { startSyncEngine } from "./lib/sync/SyncEngine";
+import { startSyncEngine } from "./lib/SyncEngine";
 
 useEffect(() => {
   startSyncEngine();
