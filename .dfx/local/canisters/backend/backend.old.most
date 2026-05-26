@@ -1,8 +1,0 @@
-// Version: 1.0.0
-type Patient__436462803 =
-  {createdAt : Time__607343887; fullName : Text; id : Nat; owner : Principal};
-type Time__607343887 = Int;
-actor {
-  stable var nextId : Nat;
-  stable var patientEntries : [(Nat, Patient__436462803)]
-};

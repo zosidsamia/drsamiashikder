@@ -1,13 +1,52 @@
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
 type Time = int;
+type PatientType = 
+ variant {
+   admitted;
+   outdoor;
+ };
 type Patient = 
  record {
+   address: opt text;
+   allergies: vec text;
+   bloodGroup: opt text;
+   chronicConditions: vec text;
+   consultantEmail: opt text;
+   consultantName: opt text;
    createdAt: Time;
+   dateOfBirth: opt Time;
+   email: opt text;
    fullName: text;
+   gender: Gender;
+   height: opt float64;
    id: nat;
+   nameBn: opt text;
    owner: principal;
+   pastSurgicalHistory: opt text;
+   patientType: PatientType;
+   phone: opt text;
+   updatedAt: Time;
+   weight: opt float64;
+ };
+type Gender = 
+ variant {
+   female;
+   male;
+   other;
  };
 service : {
-  createPatient: (fullName: text) -> (Patient);
+  _initializeAccessControlWithSecret: (userSecret: text) -> ();
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  createPatient: (fullName: text, gender: Gender, patientType:
+   PatientType) -> (Patient);
+  getAllPatients: () -> (vec Patient) query;
+  getCallerUserRole: () -> (UserRole) query;
   getPatient: (id: nat) -> (opt Patient) query;
   health: () -> (text) query;
+  isCallerAdmin: () -> (bool) query;
 }

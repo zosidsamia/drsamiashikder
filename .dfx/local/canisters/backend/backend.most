@@ -1,8 +1,98 @@
 // Version: 1.0.0
+type Data__550300993<K, V> =
+  {var count : Nat__547131912; kvs : [var ?(K, V)]};
+type Gender__601517790 = {#female; #male; #other};
+type Internal__516115269<K, V> =
+  {children : [var ?Node__309591556<K, V>]; data : Data__550300993<K, V>};
+type Leaf__265692066<K, V> = {data : Data__550300993<K, V>};
+type Map__17453697<K, V> = Map__432757688<K, V>;
+type Map__432757688<K, V> = Map__584270789<K, V>;
+type Map__584270789<K, V> =
+  {var root : Node__309591556<K, V>; var size : Nat__547131912};
+type Medication__942168594 =
+  {
+    dose : Text;
+    duration : Text;
+    frequency : Text;
+    instructions : Text;
+    name : Text
+  };
+type Nat__547131912 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__309591556<K, V> =
+  {#internal : Internal__516115269<K, V>; #leaf : Leaf__265692066<K, V>};
+type PatientType__825108053 = {#admitted; #outdoor};
 type Patient__436462803 =
-  {createdAt : Time__607343887; fullName : Text; id : Nat; owner : Principal};
+  {
+    address : ?Text;
+    allergies : [Text];
+    bloodGroup : ?Text;
+    chronicConditions : [Text];
+    consultantEmail : ?Text;
+    consultantName : ?Text;
+    createdAt : Time__607343887;
+    dateOfBirth : ?Time__607343887;
+    email : ?Text;
+    fullName : Text;
+    gender : Gender__601517790;
+    height : ?Float;
+    id : Nat;
+    nameBn : ?Text;
+    owner : Principal;
+    pastSurgicalHistory : ?Text;
+    patientType : PatientType__825108053;
+    phone : ?Text;
+    updatedAt : Time__607343887;
+    weight : ?Float
+  };
+type Prescription__923924011 =
+  {
+    createdAt : Time__607343887;
+    diagnosis : ?Text;
+    id : Nat;
+    medications : [Medication__942168594];
+    notes : ?Text;
+    patientId : Nat;
+    prescriptionDate : Time__607343887;
+    updatedAt : Time__607343887;
+    visitId : ?Nat
+  };
 type Time__607343887 = Int;
+type UserRole__749217010 = {#admin; #guest; #user};
+type VisitType__16575558 = {#admitted; #outdoor};
+type Visit__870635268 =
+  {
+    chiefComplaint : Text;
+    createdAt : Time__607343887;
+    diagnosis : ?Text;
+    historyOfPresentIllness : ?Text;
+    id : Nat;
+    notes : ?Text;
+    patientId : Nat;
+    physicalExamination : ?Text;
+    updatedAt : Time__607343887;
+    visitDate : Time__607343887;
+    visitType : VisitType__16575558;
+    vitalSigns : VitalSigns__904098512
+  };
+type VitalSigns__904098512 =
+  {
+    bloodPressure : ?Text;
+    oxygenSaturation : ?Text;
+    pulse : ?Text;
+    respiratoryRate : ?Text;
+    temperature : ?Text
+  };
 actor {
-  stable var nextId : Nat;
-  stable var patientEntries : [(Nat, Patient__436462803)]
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__17453697<Principal, UserRole__749217010>
+    };
+  stable var patientEntries : [(Nat, Patient__436462803)];
+  stable var patientIdCounter : Nat;
+  stable var prescriptionEntries : [(Nat, Prescription__923924011)];
+  stable var prescriptionIdCounter : Nat;
+  stable var visitEntries : [(Nat, Visit__870635268)];
+  stable var visitIdCounter : Nat
 };
