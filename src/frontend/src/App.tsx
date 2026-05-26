@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { startSyncEngine } from "./lib/startSync";
 
 import { Badge } from "@/components/ui/badge";
@@ -245,7 +245,7 @@ function PatientProfileWrapper() {
   return <PatientDashboard currentRole={dashboardRole} viewerRole={role} />;
 }
 
-// ── Auth Form Content ─────────────────────────────────────────────────────────
+// ── Auth Form Content ────���────────────────────────────────────────────────────
 
 const DESIGNATIONS = ["Dr.", "Prof.", "Assoc. Prof.", "Mr.", "Ms.", "Mrs."];
 
@@ -2359,6 +2359,7 @@ export default function App() {
   return (
     <EmailAuthProvider>
       <AppInner />
+      <SpeedInsights />
     </EmailAuthProvider>
   );
 }
