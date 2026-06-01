@@ -23,6 +23,11 @@ const resolvedCanisterId =
   process.env.CANISTER_ID_BACKEND ||
   "";
 
+// Supabase configuration
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_drarmankabir_SUPABASE_URL || "https://hzmvhykjkhgxuclfscye.supabase.co";
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_drarmankabir_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6bXZoeWtqa2hneHVjbGZzY3llIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNzk1NTcsImV4cCI6MjA5NTg1NTU1N30.zQrS9x_csF6-mJKVlLaRSUu1fnvc8MEYHVFGAQpLlQY";
+const backendApiUrl = process.env.VITE_BACKEND_API_URL || process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:3001";
+
 export default defineConfig({
   logLevel: "error",
   build: {
@@ -45,6 +50,10 @@ export default defineConfig({
     ),
     // Also expose on window for runtime fallback in resolveCanisterId
     "window.__RESOLVED_CANISTER_ID_BACKEND": JSON.stringify(resolvedCanisterId),
+    // Supabase configuration
+    "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(supabaseUrl),
+    "import.meta.env.VITE_SUPABASE_ANON_KEY": JSON.stringify(supabaseAnonKey),
+    "import.meta.env.VITE_BACKEND_API_URL": JSON.stringify(backendApiUrl),
   },
   css: {
     postcss: "./postcss.config.js",
@@ -59,8 +68,14 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
+        target: backendApiUrl,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '/api'),
+      },
+      "/dfx-api": {
         target: "http://127.0.0.1:4943",
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/dfx-api/, '/api'),
       },
     },
   },
@@ -159,6 +174,9 @@ export default defineConfig({
     environment("all", { prefix: "DFX_" }),
     environment(["II_URL"]),
     environment(["STORAGE_GATEWAY_URL"]),
+    environment(["VITE_SUPABASE_URL"]),
+    environment(["VITE_SUPABASE_ANON_KEY"]),
+    environment(["VITE_BACKEND_API_URL"]),
     react(),
   ],
   resolve: {
