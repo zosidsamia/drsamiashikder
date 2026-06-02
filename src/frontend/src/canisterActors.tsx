@@ -7,9 +7,12 @@ import {
   useRef,
   useState,
 } from "react";
+
 import { ExternalBlob, createActor } from "./backend";
 import type { Backend } from "./backend";
 import { CANISTER_HOST, CANISTER_ID_BACKEND } from "./canisterConfig";
+
+import { supabase } from "./lib/supabaseClient";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -17,7 +20,6 @@ import { CANISTER_HOST, CANISTER_ID_BACKEND } from "./canisterConfig";
 
 export type CanisterActor = Backend;
 
-/** Map of the 8 canister slot names to their expected CANISTER_IDS keys */
 const CANISTER_SLOT_KEYS = [
   "patient-data",
   "clinical-data",
@@ -40,6 +42,7 @@ export interface CanisterActorsContextType {
   alertActor: CanisterActor | null;
   authActor: CanisterActor | null;
   syncActor: CanisterActor | null;
+
   isConnected: boolean;
   connectionStatus: "connecting" | "connected" | "partial" | "disconnected";
   retryCount: number;
@@ -53,45 +56,27 @@ export const CanisterActorsContext =
   createContext<CanisterActorsContextType | null>(null);
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Helpers (ICP)
 // ---------------------------------------------------------------------------
 
-/**
- * Resolve a canister ID for a given slot.
- * Priority:
- *   1. CANISTER_IDS[slot] from canisterConfig (embedded at build time by vite plugin)
- *   2. CANISTER_ID_BACKEND (legacy single-canister fallback)
- */
 function resolveCanisterId(slot: CanisterSlot): string {
-  // CANISTER_IDS may be populated by the vite.config.js buildStart plugin
   const ids =
-    typeof (window as unknown as Record<string, unknown>).__CANISTER_IDS__ ===
-    "object"
-      ? ((window as unknown as Record<string, unknown>)
-          .__CANISTER_IDS__ as Record<string, string>)
+    typeof (window as any).__CANISTER_IDS__ === "object"
+      ? (window as any).__CANISTER_IDS__
       : {};
 
-  const fromWindow = ids[slot];
-  if (fromWindow && fromWindow.trim() !== "") return fromWindow.trim();
+  const fromWindow = ids?.[slot];
+  if (fromWindow) return fromWindow;
 
-  // Try to read from globalThis if injected differently
-  const fromGlobal =
-    typeof globalThis !== "undefined"
-      ? (globalThis as unknown as Record<string, Record<string, string>>)
-          .__CANISTER_IDS__?.[slot]
-      : undefined;
-  if (fromGlobal && fromGlobal.trim() !== "") return fromGlobal.trim();
+  const fromGlobal = (globalThis as any)?.__CANISTER_IDS__?.[slot];
+  if (fromGlobal) return fromGlobal;
 
-  // Fallback to the single backend ID
-  if (CANISTER_ID_BACKEND && CANISTER_ID_BACKEND.trim() !== "")
-    return CANISTER_ID_BACKEND.trim();
-
-  return "";
+  return CANISTER_ID_BACKEND || "";
 }
 
-/** No-op stubs for upload/download — these canisters don't use file transfer */
 const noopUpload = async (_file: ExternalBlob): Promise<Uint8Array> =>
   new Uint8Array();
+
 const noopDownload = async (_bytes: Uint8Array): Promise<ExternalBlob> =>
   ExternalBlob.fromBytes(new Uint8Array());
 
@@ -124,6 +109,7 @@ export function CanisterActorsProvider({
     alertActor: null,
     authActor: null,
     syncActor: null,
+
     isConnected: false,
     connectionStatus: "connecting",
     retryCount: 0,
@@ -156,16 +142,16 @@ export function CanisterActorsProvider({
 
     const allIds = Object.values(ids);
     const nonEmptyCount = allIds.filter((id) => id !== "").length;
+
     const isConnected = nonEmptyCount === CANISTER_SLOT_KEYS.length;
 
-    let connectionStatus: CanisterActorsContextType["connectionStatus"];
-    if (nonEmptyCount === 0) {
-      connectionStatus = "disconnected";
-    } else if (nonEmptyCount === CANISTER_SLOT_KEYS.length) {
+    let connectionStatus: CanisterActorsContextType["connectionStatus"] =
+      "connecting";
+
+    if (nonEmptyCount === 0) connectionStatus = "disconnected";
+    else if (nonEmptyCount === CANISTER_SLOT_KEYS.length)
       connectionStatus = "connected";
-    } else {
-      connectionStatus = "partial";
-    }
+    else connectionStatus = "partial";
 
     setState((prev) => ({
       ...prev,
@@ -190,13 +176,22 @@ export function CanisterActorsProvider({
 
     const interval = setInterval(() => {
       retryCountRef.current += 1;
-      setState((prev) => ({ ...prev, retryCount: retryCountRef.current }));
+
+      setState((prev) => ({
+        ...prev,
+        retryCount: retryCountRef.current,
+      }));
 
       const success = initActors();
+
       if (success || retryCountRef.current >= MAX_RETRIES) {
         clearInterval(interval);
+
         if (!success) {
-          setState((prev) => ({ ...prev, connectionStatus: "disconnected" }));
+          setState((prev) => ({
+            ...prev,
+            connectionStatus: "disconnected",
+          }));
         }
       }
     }, RETRY_INTERVAL_MS);
@@ -212,15 +207,57 @@ export function CanisterActorsProvider({
 }
 
 // ---------------------------------------------------------------------------
-// Hook
+// Hook (FIXED)
 // ---------------------------------------------------------------------------
 
 export function useCanisterActors(): CanisterActorsContextType {
   const ctx = useContext(CanisterActorsContext);
+
   if (!ctx) {
     throw new Error(
-      "useCanisterActors must be used within a CanisterActorsProvider",
+      "useCanisterActors must be used within CanisterActorsProvider"
     );
   }
+
   return ctx;
 }
+
+// ---------------------------------------------------------------------------
+// 🟢 HYBRID API LAYER (ICP + SUPABASE)
+// ---------------------------------------------------------------------------
+
+export const HybridAPI = {
+  // -------------------------
+  // SUPABASE DATA (MAIN DB)
+  // -------------------------
+
+  async getPatients() {
+    const { data, error } = await supabase.from("patients").select("*");
+    if (error) throw error;
+    return data;
+  },
+
+  async createPatient(data: any) {
+    const { data: result, error } = await supabase
+      .from("patients")
+      .insert(data)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return result;
+  },
+
+  // -------------------------
+  // ICP IDENTITY (OPTIONAL)
+  // -------------------------
+
+  async getCurrentUser() {
+    try {
+      const actor = (window as any)?.__ICP_ACTOR__;
+      return await actor?.getCurrentUser?.();
+    } catch {
+      return null;
+    }
+  },
+};
