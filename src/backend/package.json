@@ -1,5 +1,5 @@
 {
-  "name": "@caffeine/template-backend",
+  "name": "dr-samia-care-backend",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
@@ -16,7 +16,8 @@
     "@supabase/supabase-js": "^2.38.0",
     "@types/express": "^4.17.17",
     "@types/node": "^20.9.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "tsx": "^4.7.0"
   },
   "dependencies": {
     "express": "^4.18.2",
