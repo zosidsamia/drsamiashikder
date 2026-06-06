@@ -1,5 +1,5 @@
-// Auto-generated at build time by vite.config.js — do not edit manually
-// Generated: 2026-06-02T14:36:26.620Z
+// Stub canister configuration file kept for build compatibility.
+// No canister IDs are configured in Supabase-only mode.
 
 export const CANISTER_IDS = {
   patientData:     "",
